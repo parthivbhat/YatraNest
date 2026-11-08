@@ -1,0 +1,52 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<section class="review-heading history-heading">
+  <a class="text-link text-link-small" href="/admin/packages">← Back to packages</a>
+  <p class="eyebrow">Immutable record</p>
+  <h1>Version history</h1>
+  <p class="package-editor-code">{{ package.package_code }} · {{ package.title }}</p>
+</section>
+
+<section class="history-panel" aria-label="Package version history">
+  {% if versions %}
+  <form class="version-compare-form" method="get" action="/admin/packages/{{ package.id }}/versions/compare">
+    <div>
+      <p class="eyebrow">Compare snapshots</p>
+      <h2>Select two versions</h2>
+      <p>Both selections stay within this package. Selecting the same version twice shows it as unchanged.</p>
+    </div>
+    <label for="compare-from">From version
+      <select id="compare-from" name="from" required>
+        {% for version in versions %}<option value="{{ version.id }}">Version {{ version.version_number }} · {{ version.created_at.strftime("%d %b %Y") }}</option>{% endfor %}
+      </select>
+    </label>
+    <label for="compare-to">To version
+      <select id="compare-to" name="to" required>
+        {% for version in versions %}<option value="{{ version.id }}" {% if loop.index == 2 and versions|length > 1 %}selected{% endif %}>Version {{ version.version_number }} · {{ version.created_at.strftime("%d %b %Y") }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="button button-dark" type="submit">Compare versions</button>
+  </form>
+  <ol class="version-list">
+    {% for version in versions %}
+    <li class="version-list-item">
+      <div class="version-number">Version {{ version.version_number }}</div>
+      <div class="version-description">
+        <strong>{{ version.change_note or "Package snapshot" }}</strong>
+        <span>{{ version.created_at.strftime("%d %b %Y · %H:%M %Z") }}</span>
+        <span>Recorded by {{ version.created_by.name if version.created_by else "Staff attribution unavailable" }}</span>
+      </div>
+      <a class="button button-outline version-open-link" href="/admin/packages/{{ package.id }}/versions/{{ version.id }}">View snapshot</a>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <div class="dashboard-empty history-empty">
+    <span class="empty-mark" aria-hidden="true">—</span>
+    <h2>No version history yet</h2>
+    <p>Package snapshots will appear here after a recorded publishing or unpublishing action.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<section class="package-action-result">
+  <p class="eyebrow">Package action</p>
+  <h1>Action needs attention</h1>
+  <p class="package-action-message">{{ message }}</p>
+  {% if errors %}
+  <div class="package-form-errors" role="alert">
+    <h2>Review these details</h2>
+    <ul>{% for field, messages in errors.items() %}{% for item in messages %}<li><strong>{{ field|replace("_", " ")|replace(".", " · ")|title }}:</strong> {{ item }}</li>{% endfor %}{% endfor %}</ul>
+  </div>
+  {% endif %}
+  <div class="review-actions">
+    <a class="button button-dark" href="/admin/packages/{{ package_id }}/review">Reload package review</a>
+    <a class="button button-outline" href="/admin/packages">Back to packages</a>
+  </div>
+</section>
+{% endblock %}

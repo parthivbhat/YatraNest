@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="home-hero">
+  <div class="hero-copy">
+    <p class="eyebrow"><span class="eyebrow-dot"></span> Kochi, Kerala</p>
+    <h1>Find your way<br><em>south.</em></h1>
+    <p class="hero-intro">Thoughtful journeys shaped around the places, pace and moments you want to remember.</p>
+    <a class="button button-light" href="/packages">Explore our journeys <span aria-hidden="true">↗</span></a>
+    <div class="hero-footnote"><span class="hero-rule"></span><span>Travel starts with a good question.</span></div>
+  </div>
+  <div class="hero-image-wrap">
+    <img class="hero-image" src="/static/images/destinations/munnar.webp"
+      alt="Tea plantations across the rolling hills of Munnar, Kerala"
+      width="1600" height="900" fetchpriority="high">
+  </div>
+</section>
+
+<section class="home-intro section-wrap">
+  <div class="section-kicker">A little further</div>
+  <div class="home-intro-copy">
+    <h2>Journeys through<br>the south of India.</h2>
+    <p>From the hills to the coast, explore the journeys currently available from our Kochi-based team.</p>
+    <a class="text-link" href="/packages">See all packages <span aria-hidden="true">→</span></a>
+  </div>
+</section>
+
+{% if featured_package %}
+<section class="featured-section section-wrap" aria-labelledby="featured-heading">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">A journey to consider</p>
+      <h2 id="featured-heading">Featured journey</h2>
+    </div>
+    <a class="text-link" href="/packages">All journeys <span aria-hidden="true">→</span></a>
+  </div>
+  <div class="package-grid featured-package-grid">
+    {% with package=featured_package %}
+      {% include "packages/_package_card.html" %}
+    {% endwith %}
+  </div>
+</section>
+{% endif %}
+
+{% if recent_blog_posts %}
+<section class="home-stories-section section-wrap" aria-labelledby="home-stories-heading">
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">YatraNest journal</p>
+      <h2 id="home-stories-heading">Travel Stories &amp; Inspiration</h2>
+    </div>
+    <a class="text-link" href="/blog">View all stories <span aria-hidden="true">→</span></a>
+  </div>
+  <div class="blog-card-grid home-stories-grid">
+    {% for post in recent_blog_posts %}
+    <article class="blog-card">
+      <a class="blog-card-image" href="/blog/{{ post.slug }}" aria-label="Read {{ post.title }}">
+        {% if post.cover_image_path %}
+        <img src="{{ post.cover_image_path }}" alt="{{ post.cover_image_alt or '' }}" loading="lazy">
+        {% else %}
+        <div class="blog-image-fallback" aria-hidden="true">YatraNest</div>
+        {% endif %}
+      </a>
+      <div class="blog-card-body">
+        <p class="eyebrow">{{ post.category }}</p>
+        <h2><a href="/blog/{{ post.slug }}">{{ post.title }}</a></h2>
+        <p>{{ post.content|striptags|truncate(180, true, "…") }}</p>
+        <a class="text-link" href="/blog/{{ post.slug }}">Read story <span aria-hidden="true">→</span></a>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

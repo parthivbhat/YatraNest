@@ -1,0 +1,116 @@
+<div class="detail-shell section-wrap">
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    {% if private_preview|default(false) %}
+    <a href="/admin/packages">Staff dashboard</a><span aria-hidden="true">/</span><span aria-current="page">Private preview</span>
+    {% else %}
+    <a href="/">Home</a><span aria-hidden="true">/</span><a href="/packages">Journeys</a><span aria-hidden="true">/</span><span aria-current="page">{{ package.title }}</span>
+    {% endif %}
+  </nav>
+
+  <header class="detail-hero">
+    <div class="detail-hero-copy">
+      <p class="eyebrow">{{ package.package_code }}{% if package.duration_days %}<span class="eyebrow-divider">·</span>{{ package.duration_days }} days{% endif %}</p>
+      <h1>{{ package.title }}</h1>
+      {% if package.summary %}<p class="detail-summary">{{ package.summary }}</p>{% endif %}
+      {% if package.hotel_category %}<p class="detail-category">Accommodation category <strong>{{ package.hotel_category }}</strong></p>{% endif %}
+    </div>
+    {% set media = package_destination_media(package) %}
+    <figure class="detail-photo">
+      <img src="{{ media.hero.image }}" alt="{{ media.hero.alt }}" width="1200" height="820" fetchpriority="high">
+      <figcaption>{{ media.hero.name }}{% if media.destinations|length > 1 %} · {{ media.destinations|length }} destinations{% endif %}</figcaption>
+    </figure>
+  </header>
+
+  {% if media.supporting %}
+  <section class="detail-destination-photos" aria-label="Other destinations on this journey">
+    {% for destination in media.supporting %}
+    <figure class="supporting-destination-photo">
+      <img src="{{ destination.image }}" alt="{{ destination.alt }}" width="720" height="460" loading="lazy">
+      <figcaption>{{ destination.name }}</figcaption>
+    </figure>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if package.description %}
+  <section class="detail-description" aria-label="About this journey">
+    <p>{{ package.description }}</p>
+  </section>
+  {% endif %}
+
+  <section class="price-section" aria-labelledby="price-heading">
+    <div class="price-section-heading">
+      <div>
+        <p class="eyebrow">Plan your season</p>
+        <h2 id="price-heading">Seasonal prices</h2>
+      </div>
+      <p class="price-disclosure">Prices are per person, twin sharing.<br>GST treatment is not specified.</p>
+    </div>
+    {% if package.prices %}
+    <div class="season-price-list">
+      {% for price in package.prices %}
+      <article class="season-price">
+        <div class="season-label">
+          <h3>{{ price.season_name }}</h3>
+          <p>{{ price.start_month|month_name }}–{{ price.end_month|month_name }}</p>
+          {% if price.valid_from and price.valid_until %}
+          <p class="valid-dates">Valid {{ price.valid_from.strftime("%d %b %Y") }} – {{ price.valid_until.strftime("%d %b %Y") }}</p>
+          {% endif %}
+        </div>
+        <div class="season-amount">
+          <strong>{{ price.price_per_person|money(price.currency) }}</strong>
+          <span>{{ price.price_basis|replace("_", " ") }}</span>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-price-note">Seasonal pricing is not currently listed for this package.</p>
+    {% endif %}
+  </section>
+
+  {% if package.itinerary %}
+  <section class="detail-content-section" aria-labelledby="itinerary-heading">
+    <p class="eyebrow">The days ahead</p>
+    <h2 id="itinerary-heading">Itinerary</h2>
+    <ol class="itinerary-list">
+      {% for day in package.itinerary %}
+      <li><span class="itinerary-day">Day {{ day.day }}</span><div><h3>{{ day.title }}</h3>{% if day.description %}<p>{{ day.description }}</p>{% endif %}</div></li>
+      {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+
+  {% if package.hotel_details %}
+  <section class="detail-content-section" aria-labelledby="hotel-heading">
+    <p class="eyebrow">Where you will stay</p>
+    <h2 id="hotel-heading">Hotel details</h2>
+    <ul class="detail-list">
+      {% for hotel in package.hotel_details %}<li><strong>{{ hotel.name }}</strong>{% if hotel.location %}<span>{{ hotel.location }}</span>{% endif %}</li>{% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if package.inclusions %}
+  <section class="detail-content-section" aria-labelledby="inclusions-heading">
+    <p class="eyebrow">Included in this journey</p>
+    <h2 id="inclusions-heading">Inclusions</h2>
+    <ul class="inclusion-list">{% for inclusion in package.inclusions %}<li>{{ inclusion }}</li>{% endfor %}</ul>
+  </section>
+  {% endif %}
+
+  {% if package.map_url %}
+  <section class="detail-content-section map-section" aria-labelledby="map-heading">
+    <p class="eyebrow">Along the way</p>
+    <h2 id="map-heading">Route map</h2>
+    <a class="text-link" href="{{ package.map_url }}" rel="noopener noreferrer" target="_blank">Open map <span aria-hidden="true">↗</span></a>
+  </section>
+  {% endif %}
+
+  {% if private_preview|default(false) %}
+  <div class="back-to-journeys"><a class="text-link" href="/admin/packages">← Back to package dashboard</a></div>
+  {% else %}
+  {% include "packages/_enquiry_form.html" %}
+  <div class="back-to-journeys"><a class="text-link" href="/packages"><span aria-hidden="true">←</span> Back to all journeys</a></div>
+  {% endif %}
+</div>

@@ -1,0 +1,110 @@
+{% extends "admin/base.html" %}
+
+{% macro price_value(price, key) -%}
+  {%- if not price -%}Not specified
+  {%- elif not price.valid -%}{{ price.raw }}
+  {%- elif key == "season" -%}{{ price.season_name }}
+  {%- elif key == "months" -%}{{ price.season_label }}
+  {%- elif key == "valid_from" -%}{{ price.valid_from.strftime("%d %b %Y") if price.valid_from else "Not specified" }}
+  {%- elif key == "valid_until" -%}{{ price.valid_until.strftime("%d %b %Y") if price.valid_until else "Not specified" }}
+  {%- elif key == "amount" -%}{{ price.price_per_person|money(price.currency) }}
+  {%- elif key == "currency" -%}{{ price.currency }}
+  {%- elif key == "basis" -%}{{ price.price_basis }}
+  {%- elif key == "note" -%}{{ price.price_note or "Not specified" }}
+  {%- elif key == "raw" -%}{{ price.raw }}
+  {%- endif -%}
+{%- endmacro %}
+
+{% block content %}
+<section class="review-heading history-heading">
+  <a class="text-link text-link-small" href="/admin/packages/{{ package.id }}/versions">← Back to version history</a>
+  <p class="eyebrow">Historical comparison · Read only</p>
+  <h1>Compare versions</h1>
+  <p class="package-editor-code">{{ package.package_code }} · {{ package.title }}</p>
+</section>
+
+{% if identical_versions %}
+<div class="historical-readonly-notice" role="status">The same snapshot was selected twice. All values are unchanged.</div>
+{% else %}
+<div class="comparison-legend" aria-label="Change types">
+  <span class="change-badge change-added">Added</span>
+  <span class="change-badge change-removed">Removed</span>
+  <span class="change-badge change-changed">Changed</span>
+  <span class="change-badge change-unchanged">Unchanged</span>
+</div>
+{% endif %}
+
+{% if warnings %}
+<div class="history-warning" role="status"><strong>Some snapshot data could not be fully interpreted.</strong><ul>{% for warning in warnings %}<li>{{ warning }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+<section class="version-compare-meta" aria-label="Compared versions">
+  {% for version in [left_version, right_version] %}
+  <article class="version-meta-card">
+    <p class="eyebrow">{{ "From" if loop.index == 1 else "To" }}</p>
+    <h2>Version {{ version.version_number }}</h2>
+    <p>{{ version.created_at.strftime("%d %b %Y · %H:%M %Z") }}</p>
+    <p>{{ version.change_note or "Package snapshot" }}</p>
+    <p>Recorded by {{ version.created_by.name if version.created_by else "Staff attribution unavailable" }}</p>
+    <a class="text-link text-link-small" href="/admin/packages/{{ package.id }}/versions/{{ version.id }}">Open snapshot</a>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="review-panel comparison-panel" aria-labelledby="content-diff-heading">
+  <div class="review-panel-heading"><p class="eyebrow">Package content</p><h2 id="content-diff-heading">Field comparison</h2></div>
+  <div class="comparison-column-headings"><span>Field</span><span>From · Version {{ left_version.version_number }}</span><span>To · Version {{ right_version.version_number }}</span><span>Change</span></div>
+  {% for row in field_comparisons %}
+  <div class="comparison-row change-row-{{ row.change }}">
+    <h3>{{ row.label }}</h3>
+    <div class="comparison-value">{{ row.left }}</div>
+    <div class="comparison-value">{{ row.right }}</div>
+    <span class="change-badge change-{{ row.change }}">{{ row.change|title }}</span>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="review-panel comparison-panel" aria-labelledby="price-diff-heading">
+  <div class="review-panel-heading"><p class="eyebrow">Seasonal pricing</p><h2 id="price-diff-heading">Price comparison</h2><p>Stored price values are compared without rounding through floating-point numbers.</p></div>
+  {% if price_comparisons %}
+  {% for row in price_comparisons %}
+  <article class="price-comparison-card change-row-{{ row.change }}">
+    <div class="price-comparison-heading"><h3>{{ row.left.season_name if row.left and row.left.valid else row.right.season_name if row.right and row.right.valid else "Seasonal price" }}</h3><span class="change-badge change-{{ row.change }}">{{ row.change|title }}</span></div>
+    {% if (row.left and not row.left.valid) or (row.right and not row.right.valid) %}
+    <div class="comparison-price-column"><h4>From · Version {{ left_version.version_number }}</h4><pre>{{ price_value(row.left, "raw") if row.left else "Not specified" }}</pre></div>
+    <div class="comparison-price-column"><h4>To · Version {{ right_version.version_number }}</h4><pre>{{ price_value(row.right, "raw") if row.right else "Not specified" }}</pre></div>
+    {% else %}
+    <div class="comparison-price-columns">
+      <div class="comparison-price-column"><h4>From · Version {{ left_version.version_number }}</h4>
+        <dl>
+          <dt>Season</dt><dd>{{ price_value(row.left, "season") }}</dd>
+          <dt>Months</dt><dd>{{ price_value(row.left, "months") }}</dd>
+          <dt>Valid from</dt><dd>{{ price_value(row.left, "valid_from") }}</dd>
+          <dt>Valid until</dt><dd>{{ price_value(row.left, "valid_until") }}</dd>
+          <dt>Price per person</dt><dd>{{ price_value(row.left, "amount") }}</dd>
+          <dt>Currency</dt><dd>{{ price_value(row.left, "currency") }}</dd>
+          <dt>Price basis</dt><dd>{{ price_value(row.left, "basis") }}</dd>
+          <dt>Price note</dt><dd>{{ price_value(row.left, "note") }}</dd>
+        </dl>
+      </div>
+      <div class="comparison-price-column"><h4>To · Version {{ right_version.version_number }}</h4>
+        <dl>
+          <dt>Season</dt><dd>{{ price_value(row.right, "season") }}</dd>
+          <dt>Months</dt><dd>{{ price_value(row.right, "months") }}</dd>
+          <dt>Valid from</dt><dd>{{ price_value(row.right, "valid_from") }}</dd>
+          <dt>Valid until</dt><dd>{{ price_value(row.right, "valid_until") }}</dd>
+          <dt>Price per person</dt><dd>{{ price_value(row.right, "amount") }}</dd>
+          <dt>Currency</dt><dd>{{ price_value(row.right, "currency") }}</dd>
+          <dt>Price basis</dt><dd>{{ price_value(row.right, "basis") }}</dd>
+          <dt>Price note</dt><dd>{{ price_value(row.right, "note") }}</dd>
+        </dl>
+      </div>
+    </div>
+    {% endif %}
+  </article>
+  {% endfor %}
+  {% else %}
+  <p>No seasonal prices were recorded in either snapshot.</p>
+  {% endif %}
+</section>
+{% endblock %}

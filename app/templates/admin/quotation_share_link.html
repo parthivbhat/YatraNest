@@ -1,0 +1,5 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<section class="quote-page-heading"><a class="text-link" href="/admin/quotations/{{ quote.id }}">← Back to quotation</a><p class="eyebrow">Private customer link</p><h1>Share quotation</h1><p>This link expires in 30 days. Anyone who has it can view and download this approved quotation. Keep it private.</p></section>
+<section class="quote-share-card"><label for="share-url">Private quotation URL</label><input id="share-url" type="text" readonly value="{{ share_url }}" onclick="this.select()"><p class="quote-help">The token is shown once here. Creating another link later invalidates this one.</p><a class="button button-primary" href="{{ share_url }}" target="_blank" rel="noopener">Preview shared quotation</a></section>
+{% endblock %}

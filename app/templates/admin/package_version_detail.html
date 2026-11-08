@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<section class="review-heading history-heading">
+  <a class="text-link text-link-small" href="/admin/packages/{{ package.id }}/versions">← Back to version history</a>
+  <p class="eyebrow">Historical snapshot · Read only</p>
+  <h1>Version {{ version.version_number }}</h1>
+  <p class="package-editor-code">{{ package.package_code }} · {{ package.title }}</p>
+  <p class="history-attribution">{{ version.created_at.strftime("%d %b %Y · %H:%M %Z") }} · {{ version.change_note or "Package snapshot" }} · {{ version.created_by.name if version.created_by else "Staff attribution unavailable" }}</p>
+</section>
+
+<div class="historical-readonly-notice" role="note">This page shows an immutable historical record. It does not change the current package.</div>
+{% if restored %}<div class="restore-success-notice" role="status">Restoration completed. The package was restored from this version, and both audit snapshots were recorded.</div>{% endif %}
+
+<div class="review-actions">
+  <a class="button button-outline" href="/admin/packages/{{ package.id }}/versions/{{ version.id }}/restore">Restore this version</a>
+</div>
+
+{% if warnings %}
+<div class="history-warning" role="status"><strong>Some snapshot data could not be fully interpreted.</strong><ul>{% for warning in warnings %}<li>{{ warning }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+<section class="review-panel history-fields" aria-labelledby="snapshot-fields-heading">
+  <div class="review-panel-heading"><p class="eyebrow">Package content</p><h2 id="snapshot-fields-heading">Saved fields</h2></div>
+  {% if fields %}
+    {% for field in fields %}
+    <div class="review-draft-row"><h3>{{ field.label }}</h3><div class="review-value">{{ field.value }}</div></div>
+    {% endfor %}
+  {% else %}
+    <p>This snapshot does not contain readable package fields.</p>
+  {% endif %}
+</section>
+
+<section class="review-panel history-prices" aria-labelledby="snapshot-prices-heading">
+  <div class="review-panel-heading"><p class="eyebrow">Seasonal pricing</p><h2 id="snapshot-prices-heading">Prices at this version</h2><p>Historical amounts are shown as stored in this snapshot.</p></div>
+  {% if prices %}
+  <ul class="review-price-list">
+    {% for price in prices %}
+      {% if price.valid %}
+      <li>
+        <strong>{{ price.season_name }}</strong><span>{{ price.season_label }}</span>
+        <b>{{ price.price_per_person|money(price.currency) }} per person</b>
+        <small>{{ "Twin sharing" if price.price_basis == "per_person" else price.price_basis }}{% if price.price_note %} · {{ price.price_note }}{% endif %}</small>
+        {% if price.valid_from or price.valid_until %}<small>Valid {{ price.valid_from.strftime("%d %b %Y") if price.valid_from else "from any date" }} – {{ price.valid_until.strftime("%d %b %Y") if price.valid_until else "open ended" }}</small>{% endif %}
+      </li>
+      {% else %}
+      <li class="version-invalid-price"><strong>Uninterpreted seasonal price</strong><pre>{{ price.raw }}</pre></li>
+      {% endif %}
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>No seasonal prices were recorded in this snapshot.</p>
+  {% endif %}
+</section>
+{% endblock %}

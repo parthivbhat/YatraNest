@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{{ meta_description }}">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#f7f7f2">
+    <link rel="icon" type="image/svg+xml" href="/static/images/yatranest-mark.svg">
+    <link rel="stylesheet" href="/static/css/site.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <title>{{ page_title }}</title>
+  </head>
+  <body class="admin-body">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="admin-header">
+      <div class="admin-header-inner">
+        <a class="brand" href="/admin/packages" aria-label="YatraNest package dashboard">
+          <span class="brand-mark" aria-hidden="true">Y</span>
+          <span>Yatra<span class="brand-light">Nest</span></span>
+          <span class="workspace-label">Staff</span>
+        </a>
+        <nav class="admin-nav" aria-label="Staff navigation">
+          <a href="/admin/packages">Packages</a>
+          <a href="/admin/enquiries">Enquiries</a>
+          {% if staff.role == "admin" %}<a href="/admin/staff">Staff</a>{% endif %}
+          {% if staff.role in ["admin", "editor"] %}<a href="/admin/blog">Blog</a>{% endif %}
+        </nav>
+        <div class="admin-identity">
+          <span class="admin-user-name">{{ staff.name }}</span>
+          <span class="role-badge">{{ staff.role|title }}</span>
+          <form method="post" action="/admin/logout">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="logout-button" type="submit">Sign out</button>
+          </form>
+        </div>
+      </div>
+    </header>
+    <main id="main-content" class="admin-main">
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="admin-footer">YatraNest · Staff workspace</footer>
+  </body>
+</html>

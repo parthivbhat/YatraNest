@@ -1,0 +1,84 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<section class="dashboard-heading">
+  <div>
+    <p class="eyebrow">Administrator workspace</p>
+    <h1>Staff management</h1>
+    <p class="dashboard-intro">Create staff accounts and manage their access. Passwords are never displayed.</p>
+  </div>
+</section>
+
+{% if success %}<div class="staff-message" role="status">{{ success }}</div>{% endif %}
+{% if errors %}<div class="form-error staff-errors" role="alert"><strong>Could not complete the action:</strong><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+
+<section class="staff-create-panel dashboard-panel" aria-labelledby="staff-create-heading">
+  <div class="staff-panel-heading"><div><p class="eyebrow">New account</p><h2 id="staff-create-heading">Create staff account</h2></div></div>
+  <form class="staff-create-form" method="post" action="/admin/staff">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Name<input name="name" maxlength="160" autocomplete="name" required></label>
+    <label>Email<input type="email" name="email" maxlength="320" autocomplete="email" required></label>
+    <label>Role<select name="role" required>{% for role in roles %}<option value="{{ role }}">{{ role|title }}</option>{% endfor %}</select></label>
+    <label>Password <span class="staff-hint">At least 12 characters</span><input type="password" name="password" minlength="12" maxlength="1024" autocomplete="new-password" required></label>
+    <label>Confirm password<input type="password" name="password_confirm" minlength="12" maxlength="1024" autocomplete="new-password" required></label>
+    <label class="staff-confirm"><input type="checkbox" name="confirm_action" value="yes" required> I confirm creating this account.</label>
+    <button class="button button-primary" type="submit">Create account</button>
+  </form>
+</section>
+
+<section class="staff-list-section" aria-labelledby="staff-list-heading">
+  <div class="staff-panel-heading"><div><p class="eyebrow">Accounts</p><h2 id="staff-list-heading">Staff accounts</h2></div><span class="staff-count">{{ accounts|length }} accounts</span></div>
+  {% if accounts %}
+  <div class="staff-account-list">
+    {% for account in accounts %}
+    <article class="staff-account-card">
+      <header class="staff-account-header">
+        <div class="staff-account-identity">
+          <h3>{{ account.name }}</h3>
+          <a class="staff-email" href="mailto:{{ account.email }}">{{ account.email }}</a>
+          <span class="staff-created">Created {{ account.created_at.strftime("%d %b %Y") }}</span>
+        </div>
+        <div class="staff-account-badges">
+          <span class="role-badge">{{ account.role|title }}</span>
+          <span class="status-badge {% if account.is_active %}status-published{% else %}status-archived{% endif %}">{% if account.is_active %}Active{% else %}Inactive{% endif %}</span>
+        </div>
+      </header>
+      <div class="staff-account-actions">
+        <section class="staff-action-panel" aria-labelledby="staff-role-heading-{{ account.id }}">
+          <h4 id="staff-role-heading-{{ account.id }}">Change role</h4>
+          <form class="staff-action-form" method="post" action="/admin/staff/{{ account.id }}/role">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label for="role-{{ account.id }}">Staff role</label>
+            <select id="role-{{ account.id }}" name="role">{% for role in roles %}<option value="{{ role }}"{% if role == account.role %} selected{% endif %}>{{ role|title }}</option>{% endfor %}</select>
+            <label class="staff-confirm"><input type="checkbox" name="confirm_action" value="yes" required> Confirm role change</label>
+            <button class="button button-outline" type="submit">Save role</button>
+          </form>
+        </section>
+        <section class="staff-action-panel" aria-labelledby="staff-access-heading-{{ account.id }}">
+          <h4 id="staff-access-heading-{{ account.id }}">Account status</h4>
+          <form class="staff-action-form" method="post" action="/admin/staff/{{ account.id }}/active">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="active" value="{{ 'false' if account.is_active else 'true' }}">
+            <p class="staff-action-description">{% if account.is_active %}This account can sign in and use YatraNest staff tools.{% else %}This account is currently unable to sign in.{% endif %}</p>
+            <label class="staff-confirm"><input type="checkbox" name="confirm_action" value="yes" required> Confirm {% if account.is_active %}deactivation{% else %}activation{% endif %}</label>
+            <button class="button button-outline" type="submit">{% if account.is_active %}Deactivate account{% else %}Activate account{% endif %}</button>
+          </form>
+        </section>
+        <section class="staff-action-panel" aria-labelledby="staff-password-heading-{{ account.id }}">
+          <h4 id="staff-password-heading-{{ account.id }}">Reset password</h4>
+          <form class="staff-action-form" method="post" action="/admin/staff/{{ account.id }}/password">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label class="visually-hidden" for="password-{{ account.id }}">New password for {{ account.name }}</label>
+            <input id="password-{{ account.id }}" type="password" name="new_password" minlength="12" maxlength="1024" autocomplete="new-password" placeholder="New password (12+ characters)" required>
+            <label class="visually-hidden" for="password-confirm-{{ account.id }}">Confirm new password for {{ account.name }}</label>
+            <input id="password-confirm-{{ account.id }}" type="password" name="password_confirm" minlength="12" maxlength="1024" autocomplete="new-password" placeholder="Confirm new password" required>
+            <label class="staff-confirm"><input type="checkbox" name="confirm_action" value="yes" required> Confirm password reset</label>
+            <button class="button button-outline" type="submit">Reset password</button>
+          </form>
+        </section>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+  {% else %}<div class="dashboard-empty"><p>No staff accounts are available.</p></div>{% endif %}
+</section>
+{% endblock %}

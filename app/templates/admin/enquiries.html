@@ -1,0 +1,89 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<section class="dashboard-heading enquiry-inbox-heading" aria-labelledby="enquiries-title">
+  <div>
+    <p class="eyebrow">Traveller support</p>
+    <h1 id="enquiries-title">Enquiry inbox</h1>
+    <p class="dashboard-intro">Review incoming travel requests and their current handling status.</p>
+  </div>
+  <p class="package-count"><strong>{{ total }}</strong> entr{% if total == 1 %}y{% else %}ies{% endif %}<span>match</span></p>
+</section>
+
+<section class="dashboard-panel enquiry-inbox-panel" aria-label="Enquiries">
+  <form class="enquiry-filters" method="get" action="/admin/enquiries">
+    <label class="enquiry-search-field" for="enquiry-search">
+      <span>Search enquiries</span>
+      <input id="enquiry-search" name="q" type="search" maxlength="160" value="{{ query }}" placeholder="Name, email, phone or message">
+    </label>
+    <label for="enquiry-status-filter">
+      <span>Status</span>
+      <select id="enquiry-status-filter" name="status">
+        <option value="">All statuses</option>
+        {% for option in status_options %}<option value="{{ option }}" {% if selected_status == option %}selected{% endif %}>{{ option|replace("_", " ")|title }}</option>{% endfor %}
+      </select>
+    </label>
+    {% if staff.role in ["admin", "editor"] %}
+    <label for="enquiry-assignee-filter">
+      <span>Assigned to</span>
+      <select id="enquiry-assignee-filter" name="assigned_to">
+        <option value="">All enquiries</option>
+        <option value="unassigned" {% if selected_assignee == "unassigned" %}selected{% endif %}>Unassigned</option>
+        {% for consultant in consultants %}<option value="{{ consultant.id }}" {% if selected_assignee == consultant.id|string %}selected{% endif %}>{{ consultant.name }}</option>{% endfor %}
+      </select>
+    </label>
+    {% endif %}
+    <label class="enquiry-page-size" for="enquiry-page-size">
+      <span>Per page</span>
+      <select id="enquiry-page-size" name="page_size">
+        {% for size in [10, 25, 50, 100] %}<option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="button button-dark filter-button" type="submit">Apply filters</button>
+    {% if query or selected_status or selected_assignee %}<a class="clear-filters" href="/admin/enquiries">Clear</a>{% endif %}
+  </form>
+
+  {% if enquiries %}
+  <div class="enquiry-table-scroll">
+    <table class="enquiry-table">
+      <thead><tr>
+        <th scope="col">Received</th><th scope="col">Traveller</th><th scope="col">Package</th>
+        <th scope="col">Travel request</th><th scope="col">Budget</th><th scope="col">Status &amp; owner</th><th scope="col">Open</th>
+      </tr></thead>
+      <tbody>
+        {% for enquiry in enquiries %}
+        <tr>
+          <td data-label="Received"><time datetime="{{ enquiry.created_at.isoformat() }}">{{ enquiry.created_at.strftime("%d %b %Y") }}<span>{{ enquiry.created_at.strftime("%H:%M UTC") }}</span></time></td>
+          <td data-label="Traveller"><strong>{{ enquiry.customer_name or "Name not recorded" }}</strong><span class="enquiry-contact-summary">{{ enquiry.customer_email or enquiry.customer_phone or "No contact recorded" }}</span></td>
+          <td data-label="Package">
+            {% if enquiry.package %}<strong>{{ enquiry.package.title }}</strong><span class="enquiry-secondary">{{ destination_label(enquiry.package.destinations) }}</span>
+            {% else %}<span class="enquiry-secondary">Package no longer available</span>{% endif %}
+          </td>
+          <td data-label="Travel request">
+            {% if enquiry.travel_start_date and enquiry.travel_end_date %}
+            <strong>{% if enquiry.travel_dates_flexible %}Flexible · {% endif %}{{ enquiry.travel_start_date.strftime("%d %b %Y") }} – {{ enquiry.travel_end_date.strftime("%d %b %Y") }}</strong>
+            {% else %}<strong>Dates not recorded</strong>{% endif %}
+            {% if enquiry.adults is not none %}<span class="enquiry-secondary">{{ enquiry.adults }} adults · {{ enquiry.children if enquiry.children is not none else "—" }} children · {{ enquiry.infants if enquiry.infants is not none else "—" }} infants</span>{% endif %}
+          </td>
+          <td data-label="Budget">{% if enquiry.budget_amount_inr is not none %}{{ enquiry.budget_amount_inr|money }}{% else %}<span class="enquiry-secondary">Not specified</span>{% endif %}</td>
+          <td data-label="Status & owner"><span class="enquiry-status status-{{ enquiry.status }}">{{ enquiry.status|replace("_", " ")|title }}</span><span class="enquiry-owner">{{ enquiry.assigned_to.name if enquiry.assigned_to else "Unassigned" }}</span></td>
+          <td data-label="Open"><a class="dashboard-action-link" href="/admin/enquiries/{{ enquiry.id }}">View enquiry <span aria-hidden="true">→</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="dashboard-empty enquiry-empty">
+    <span class="empty-mark" aria-hidden="true">—</span>
+    <h2>No enquiries found</h2>
+    <p>{% if query or selected_status or selected_assignee %}Adjust or clear the filters to see more results.{% elif staff.role == "consultant" %}Enquiries assigned to you will appear here.{% else %}New package enquiries will appear here.{% endif %}</p>
+  </div>
+  {% endif %}
+
+  <nav class="enquiry-pagination" aria-label="Enquiry pages">
+    <span>Page {{ page }} of {{ page_count }}</span>
+    <div>{% if previous_url %}<a class="button button-outline" href="{{ previous_url }}">← Previous</a>{% endif %}{% if next_url %}<a class="button button-outline" href="{{ next_url }}">Next →</a>{% endif %}</div>
+  </nav>
+</section>
+{% endblock %}

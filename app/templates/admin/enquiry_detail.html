@@ -1,0 +1,336 @@
+{% extends "admin/base.html" %}
+
+{% macro extraction_values(value) %}
+  {% if value %}
+  <dl class="enquiry-detail-list ai-extraction-values">
+    <div><dt>Destination</dt><dd>{{ value.destination or "Not specified" }}</dd></div>
+    <div><dt>Travel dates</dt><dd>{% if value.start_date and value.end_date %}{{ value.start_date.strftime("%d %b %Y") }} – {{ value.end_date.strftime("%d %b %Y") }}{% else %}Not specified{% endif %}</dd></div>
+    <div><dt>Date flexibility</dt><dd>{% if value.flexible is none %}Unknown{% elif value.flexible %}Flexible{% else %}Exact dates{% endif %}</dd></div>
+    {% if value.period_text %}<div><dt>Customer's period wording</dt><dd>{{ value.period_text }}</dd></div>{% endif %}
+    <div><dt>Travellers</dt><dd>Adults: {{ value.adults if value.adults is not none else "Unknown" }} · Children: {{ value.children if value.children is not none else "Unknown" }} · Infants: {{ value.infants if value.infants is not none else "Unknown" }}</dd></div>
+    <div><dt>Budget</dt><dd>{% if value.budget_amount is not none %}{{ value.budget_amount }} {{ value.budget_currency or "Currency unknown" }} · {{ value.budget_scope|replace("_", " ") if value.budget_scope else "Scope unknown" }}{% else %}Not specified{% endif %}</dd></div>
+    <div><dt>Preferences</dt><dd>{{ value.preferences|join(", ") if value.preferences else "Not specified" }}</dd></div>
+    <div><dt>Missing information</dt><dd>{{ value.missing_information|join(", ")|replace("_", " ") if value.missing_information else "None recorded" }}</dd></div>
+    <div><dt>Ambiguous information</dt><dd>{{ value.ambiguous_information|join(", ")|replace("_", " ") if value.ambiguous_information else "None recorded" }}</dd></div>
+  </dl>
+  {% else %}<p class="enquiry-secondary">No valid structured extraction is available to display.</p>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<section class="enquiry-workspace-heading">
+  <a class="text-link" href="/admin/enquiries">← Back to enquiry inbox</a>
+  {% if success_message %}<p class="enquiry-action-success" role="status">{{ success_message }}</p>{% endif %}
+  <div class="enquiry-workspace-title-row">
+    <div><p class="eyebrow">Enquiry received {{ enquiry.created_at.strftime("%d %b %Y at %H:%M UTC") }}</p><h1>{{ enquiry.customer_name or "Traveller enquiry" }}</h1></div>
+    <span class="enquiry-status status-{{ enquiry.status }}">{{ enquiry.status|replace("_", " ")|title }}</span>
+  </div>
+  <p class="enquiry-workspace-summary">{{ enquiry.package.title if enquiry.package else "Package no longer available" }} · {{ enquiry.assigned_to.name if enquiry.assigned_to else "Unassigned" }}</p>
+  <div class="quote-workspace-actions">
+    <a class="button button-primary" href="/admin/enquiries/{{ enquiry.id }}/quotations/new">Create quotation</a>
+    {% if enquiry.quotations %}<span>{{ enquiry.quotations|length }} saved quotation{{ "s" if enquiry.quotations|length != 1 else "" }}</span>{% endif %}
+  </div>
+</section>
+
+<div class="enquiry-workspace-grid">
+  <div class="enquiry-workspace-main">
+    {% if enquiry.quotations %}
+    <section class="enquiry-card quote-history-card" aria-labelledby="quotation-history-heading">
+      <div class="enquiry-card-heading"><div><p class="eyebrow">Staff prepared</p><h2 id="quotation-history-heading">Quotations</h2></div></div>
+      <div class="quote-history-list">
+        {% for quote in enquiry.quotations|sort(attribute="created_at", reverse=true) %}
+        <a class="quote-history-item" href="/admin/quotations/{{ quote.id }}">
+          <span><strong>{{ quote.package_title_snapshot }}</strong><small>{{ quote.created_at.strftime("%d %b %Y · %H:%M UTC") }} · {{ quote.status|title }}</small></span>
+          <span class="quote-history-amount">{% if quote.total_amount is not none %}{{ quote.total_amount|money(quote.currency) }}{% else %}Fare confirmation needed{% endif %}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+    <div class="ai-source-review-grid">
+    <section class="enquiry-card" aria-labelledby="original-message-heading">
+      <div class="enquiry-card-heading"><div><p class="eyebrow">Traveller's words</p><h2 id="original-message-heading">Original message</h2></div></div>
+      <div class="enquiry-original-message">{{ enquiry.original_message }}</div>
+    </section>
+
+    <section class="enquiry-card ai-extraction-card" aria-labelledby="ai-extraction-heading">
+      <div class="enquiry-card-heading"><div><p class="eyebrow">Staff assistance · human review required</p><h2 id="ai-extraction-heading">AI extraction</h2></div>
+        {% if ai_suggestion and ai_suggestion.generation_status %}<span class="reply-status reply-status-{{ ai_suggestion.generation_status }}">{{ ai_suggestion.generation_status|title }}</span>{% elif ai_suggestion %}<span class="reply-status">Legacy status unknown</span>{% endif %}
+      </div>
+      {% if ai_suggestion %}
+        {% if ai_suggestion.provider or ai_suggestion.model_name %}<p class="ai-provider-meta">{% if ai_suggestion.provider %}{{ ai_suggestion.provider|title }}{% endif %}{% if ai_suggestion.model_name %} · {{ ai_suggestion.model_name }}{% endif %}</p>{% endif %}
+        {% if ai_suggestion.generated_at %}<p class="ai-provider-meta">Generated {{ ai_suggestion.generated_at.strftime("%d %b %Y · %H:%M UTC") }}</p>{% endif %}
+        {% if ai_suggestion.failure_code %}<p class="ai-safe-failure" role="status">{{ ai_failure_message or "Extraction could not be completed. Continue with the original enquiry." }} <span>({{ ai_suggestion.failure_code }})</span></p>{% endif %}
+        {% if ai_inconsistent_accepted_payload %}<p class="ai-safe-failure" role="status">Accepted extraction metadata is inconsistent. No extraction is treated as reviewed; compare with the original enquiry and contact an administrator if needed.</p>{% endif %}
+        <h3 class="enquiry-subheading">Raw AI extraction</h3>
+        {% if ai_suggestion.generation_status == "completed" %}{{ extraction_values(ai_raw_extraction) }}{% else %}<p class="enquiry-secondary">{% if ai_suggestion.generation_status == "processing" %}Extraction is being processed. The original enquiry remains available.{% elif ai_suggestion.generation_status == "pending" %}Extraction is waiting to run. The original enquiry remains available.{% else %}No AI extraction is available. Staff can continue from the original enquiry.{% endif %}</p>{% endif %}
+        {% if ai_retry_allowed %}
+        <form class="enquiry-inline-action" method="post" action="/admin/enquiries/{{ enquiry.id }}/ai-extraction/retry">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="button button-secondary" type="submit">Retry extraction</button>
+        </form>
+        {% elif ai_retry_waiting %}<p class="enquiry-form-hint">A retry is available after the stale-work recovery interval if the task did not complete.</p>{% endif %}
+        <h3 class="enquiry-subheading">Staff-accepted extraction</h3>
+        {% if ai_has_accepted_extraction %}
+          <p class="ai-review-status">{{ ai_suggestion.extraction_review_status|title }} by {{ ai_suggestion.extraction_reviewed_by.name if ai_suggestion.extraction_reviewed_by else "Staff account unavailable" }}{% if ai_suggestion.extraction_reviewed_at %} · {{ ai_suggestion.extraction_reviewed_at.strftime("%d %b %Y · %H:%M UTC") }}{% endif %}</p>
+          {{ extraction_values(ai_accepted_extraction) }}
+        {% else %}<p class="enquiry-secondary">No extraction has been accepted. AI values are suggestions only.</p>{% endif %}
+
+        <section class="recommendation-panel" aria-labelledby="package-recommendations-heading">
+          <h3 class="enquiry-subheading" id="package-recommendations-heading">Package recommendations</h3>
+          {% if recommendation_result %}
+            {% if recommendation_source == "provisional" %}<p class="recommendation-provisional">Provisional · based on unaccepted AI extraction. Review the extraction before relying on these candidates.</p>{% else %}<p class="recommendation-reviewed">Based on staff-accepted extraction.</p>{% endif %}
+            <p class="enquiry-form-hint">{{ recommendation_result.explanation }}</p>
+            <p class="enquiry-form-hint">Suggestions are not quotes or availability confirmations and are not sent to travellers.</p>
+            {% if recommendation_result.recommendations %}
+            <ol class="recommendation-list">
+              {% for recommendation in recommendation_result.recommendations %}
+              <li class="recommendation-item">
+                <div class="recommendation-title-row"><div><span class="recommendation-rank">{{ loop.index }}</span><strong>{{ recommendation.title }}</strong><small>{{ recommendation.package_code }}</small></div><span class="recommendation-score">Match score {{ recommendation.score }}</span></div>
+                <p class="recommendation-destination">{{ recommendation.destinations|join(", ") if recommendation.destinations else "No separate destination field; package title matched the enquiry destination" }}{% if recommendation.duration_days %} · {{ recommendation.duration_days }} days{% endif %}</p>
+                {% if recommendation.season_match %}<p class="recommendation-price">{{ recommendation.season_match }} · {{ recommendation.verified_price.start_month|month_name }}–{{ recommendation.verified_price.end_month|month_name }}{% if recommendation.verified_price %} · {% if recommendation.verified_price.currency == "INR" %}₹{% endif %}{{ recommendation.verified_price.price_per_person }} {{ recommendation.verified_price.currency }} {{ "per person" if recommendation.verified_price.price_basis == "per_person" else recommendation.verified_price.price_basis|replace("_", " ") }}{% endif %}</p>{% elif recommendation.verified_price %}<p class="recommendation-price">Available stored rate · {{ recommendation.verified_price.start_month|month_name }}–{{ recommendation.verified_price.end_month|month_name }} · {% if recommendation.verified_price.currency == "INR" %}₹{% endif %}{{ recommendation.verified_price.price_per_person }} {{ recommendation.verified_price.currency }} {{ "per person" if recommendation.verified_price.price_basis == "per_person" else recommendation.verified_price.price_basis|replace("_", " ") }} · {{ recommendation.verified_price.season_name }}</p>{% else %}<p class="recommendation-price">Pricing requires staff confirmation.</p>{% endif %}
+                {% if recommendation.verified_price and (recommendation.verified_price.valid_from or recommendation.verified_price.valid_until) %}<p class="recommendation-note">Stored effective date bounds: {{ recommendation.verified_price.valid_from.strftime("%d %b %Y") if recommendation.verified_price.valid_from else "not set" }} – {{ recommendation.verified_price.valid_until.strftime("%d %b %Y") if recommendation.verified_price.valid_until else "not set" }}</p>{% endif %}
+                {% if recommendation.verified_price and recommendation.verified_price.price_note %}<p class="recommendation-note">{{ recommendation.verified_price.price_note }}</p>{% endif %}
+                {% if recommendation.match_reasons %}<ul class="recommendation-reasons">{% for reason in recommendation.match_reasons %}<li>{{ reason }}</li>{% endfor %}</ul>{% endif %}
+                {% if recommendation.caveats %}<ul class="recommendation-caveats">{% for caveat in recommendation.caveats %}<li>{{ caveat }}</li>{% endfor %}</ul>{% endif %}
+              </li>
+              {% endfor %}
+            </ol>
+            {% else %}<p class="enquiry-secondary">{{ recommendation_result.explanation }}</p>{% endif %}
+          {% else %}<p class="enquiry-secondary">Recommendations are unavailable until a valid AI extraction is completed or staff accepts corrected extraction values. The original enquiry remains the source of truth.</p>{% endif %}
+        </section>
+
+        {% if staff.is_active and staff.role in ["admin", "editor", "consultant"] %}
+        <details class="ai-correction-details"{% if not ai_has_accepted_extraction %} open{% endif %}>
+          <summary>{% if ai_has_accepted_extraction %}Correct accepted extraction{% else %}Review and accept extraction{% endif %}</summary>
+          <form class="enquiry-action-form ai-correction-form" method="post" action="/admin/enquiries/{{ enquiry.id }}/ai-extraction/review">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <label for="ai-destination">Destination</label><input id="ai-destination" name="destination" maxlength="200" value="{{ ai_form_values.destination }}">
+            <div class="ai-form-columns">
+              <div><label for="ai-start-date">Travel start date</label><input id="ai-start-date" type="date" name="travel_start_date" value="{{ ai_form_values.travel_start_date }}"></div>
+              <div><label for="ai-end-date">Travel end date</label><input id="ai-end-date" type="date" name="travel_end_date" value="{{ ai_form_values.travel_end_date }}"></div>
+            </div>
+            <label for="ai-flexible">Date flexibility</label><select id="ai-flexible" name="travel_dates_flexible"><option value="unknown"{% if ai_form_values.travel_dates_flexible == "unknown" %} selected{% endif %}>Unknown</option><option value="true"{% if ai_form_values.travel_dates_flexible == "true" %} selected{% endif %}>Flexible</option><option value="false"{% if ai_form_values.travel_dates_flexible == "false" %} selected{% endif %}>Exact dates</option></select>
+            <label for="ai-period">Original travel-period wording</label><input id="ai-period" name="original_travel_period_text" maxlength="300" value="{{ ai_form_values.original_travel_period_text }}">
+            <div class="ai-form-columns ai-count-columns">
+              <div><label for="ai-adults">Adults</label><input id="ai-adults" type="number" min="0" max="100" name="adults" value="{{ ai_form_values.adults }}"></div>
+              <div><label for="ai-children">Children</label><input id="ai-children" type="number" min="0" max="100" name="children" value="{{ ai_form_values.children }}"></div>
+              <div><label for="ai-infants">Infants</label><input id="ai-infants" type="number" min="0" max="100" name="infants" value="{{ ai_form_values.infants }}"></div>
+            </div>
+            <div class="ai-form-columns">
+              <div><label for="ai-budget">Budget amount</label><input id="ai-budget" name="budget_amount" inputmode="decimal" maxlength="13" value="{{ ai_form_values.budget_amount }}"></div>
+              <div><label for="ai-currency">Currency code</label><input id="ai-currency" name="budget_currency" maxlength="3" value="{{ ai_form_values.budget_currency }}" placeholder="Explicit code only"></div>
+            </div>
+            <label for="ai-budget-scope">Budget scope</label><select id="ai-budget-scope" name="budget_scope"><option value=""{% if not ai_form_values.budget_scope %} selected{% endif %}>Unknown</option><option value="total"{% if ai_form_values.budget_scope == "total" %} selected{% endif %}>Total</option><option value="per_person"{% if ai_form_values.budget_scope == "per_person" %} selected{% endif %}>Per person</option></select>
+            <label for="ai-preferences">Preferences (one per line)</label><textarea id="ai-preferences" name="preferences" rows="3" maxlength="2000">{{ ai_form_values.preferences }}</textarea>
+            <fieldset class="ai-field-set"><legend>Missing information</legend>{% for field in extraction_field_options %}<label><input type="checkbox" name="missing_information" value="{{ field }}"{% if field in ai_form_values.missing_information %} checked{% endif %}> {{ field|replace("_", " ")|title }}</label>{% endfor %}</fieldset>
+            <fieldset class="ai-field-set"><legend>Ambiguous information</legend>{% for field in extraction_field_options %}<label><input type="checkbox" name="ambiguous_information" value="{{ field }}"{% if field in ai_form_values.ambiguous_information %} checked{% endif %}> {{ field|replace("_", " ")|title }}</label>{% endfor %}</fieldset>
+            <p class="enquiry-form-hint">Review the original message before accepting. Unknown values must stay unknown. This action changes only the staff-accepted extraction; it does not approve or send a reply.</p>
+            <button class="button button-primary" type="submit">Save accepted extraction</button>
+          </form>
+        </details>
+        {% endif %}
+        <h3 class="enquiry-subheading">Extraction review history</h3>
+        {% if ai_review_history %}<ol class="enquiry-timeline">{% for item in ai_review_history %}{% set event = item.event %}<li><time datetime="{{ event.created_at.isoformat() }}">{{ event.created_at.strftime("%d %b %Y · %H:%M UTC") }}</time><p>Extraction {{ event.action_type }}.</p><span>By {{ event.actor.name if event.actor else "Staff account unavailable" }}</span>{{ extraction_values(item.extraction) }}</li>{% endfor %}</ol>{% else %}<p class="enquiry-secondary">No extraction review events have been recorded.</p>{% endif %}
+      {% else %}<p class="enquiry-secondary">No extraction lifecycle record exists for this enquiry. Continue using the original enquiry details.</p>{% endif %}
+    </section>
+    </div>
+
+    <section class="enquiry-card" aria-labelledby="travel-request-heading">
+      <div class="enquiry-card-heading"><div><p class="eyebrow">Customer-submitted structured details</p><h2 id="travel-request-heading">Travel request</h2></div></div>
+      <dl class="enquiry-detail-list">
+        <div><dt>Travel period</dt><dd>{% if enquiry.travel_start_date and enquiry.travel_end_date %}{% if enquiry.travel_dates_flexible %}Flexible period · {% endif %}{{ enquiry.travel_start_date.strftime("%d %b %Y") }} – {{ enquiry.travel_end_date.strftime("%d %b %Y") }}{% else %}Not recorded{% endif %}</dd></div>
+        <div><dt>Adults</dt><dd>{{ enquiry.adults if enquiry.adults is not none else "Not recorded" }}</dd></div>
+        <div><dt>Children</dt><dd>{{ enquiry.children if enquiry.children is not none else "Not recorded" }}</dd></div>
+        <div><dt>Infants</dt><dd>{{ enquiry.infants if enquiry.infants is not none else "Not recorded" }}</dd></div>
+        <div><dt>Total budget</dt><dd>{% if enquiry.budget_amount_inr is not none %}{{ enquiry.budget_amount_inr|money }}{% else %}Not specified{% endif %}</dd></div>
+      </dl>
+    </section>
+
+    <section class="enquiry-card" aria-labelledby="package-heading">
+      <div class="enquiry-card-heading"><div><p class="eyebrow">Package context</p><h2 id="package-heading">Associated package</h2></div></div>
+      {% if enquiry.package %}
+      <div class="enquiry-package-summary">
+        <div><strong>{{ enquiry.package.title }}</strong><span>{{ destination_label(enquiry.package.destinations) }}</span></div>
+        <span class="status-badge status-{{ enquiry.package.status }}">{{ enquiry.package.status|title }}</span>
+      </div>
+      <h3 class="enquiry-subheading">Current package prices</h3>
+      {% if enquiry.package.prices %}
+      <div class="enquiry-prices">
+        {% for price in enquiry.package.prices %}
+        <article><div><strong>{{ price.season_name }}</strong><span>{{ price.start_month|month_name }}–{{ price.end_month|month_name }}{% if price.valid_from and price.valid_until %} · Valid {{ price.valid_from.strftime("%d %b %Y") }}–{{ price.valid_until.strftime("%d %b %Y") }}{% endif %}</span>{% if price.price_note %}<span>{{ price.price_note }}</span>{% endif %}</div><strong>{{ price.price_per_person|money(price.currency) }} <small>{{ price.price_basis|replace("_", " ") }}</small></strong></article>
+        {% endfor %}
+      </div>
+      <p class="enquiry-private-note">These are the current database prices for this package.</p>
+      {% else %}<p class="enquiry-secondary">No current prices are listed for this package.</p>{% endif %}
+      {% else %}<p class="enquiry-secondary">The package associated with this enquiry is no longer available. No package prices are shown.</p>{% endif %}
+    </section>
+
+    <section class="enquiry-card" aria-labelledby="activity-heading">
+      <div class="enquiry-card-heading"><div><p class="eyebrow">Audit trail</p><h2 id="activity-heading">Activity</h2></div></div>
+      {% if enquiry.activities %}
+      <ol class="enquiry-timeline">
+        {% for activity in enquiry.activities|sort(attribute="created_at", reverse=true) %}
+        <li>
+          <time datetime="{{ activity.created_at.isoformat() }}">{{ activity.created_at.strftime("%d %b %Y · %H:%M UTC") }}</time>
+          {% if activity.event_type == "status_changed" %}
+          <p>Status changed{% if activity.from_status %} from <strong>{{ activity.from_status|replace("_", " ")|title }}</strong>{% endif %} to <strong>{{ activity.to_status|replace("_", " ")|title }}</strong>.</p>
+          {% elif activity.event_type == "assignment_changed" %}
+          <p>Assignment changed from <strong>{% if activity.from_assigned_to_id %}{{ activity.from_assignee.name if activity.from_assignee else "Staff account unavailable" }}{% else %}Unassigned{% endif %}</strong> to <strong>{% if activity.to_assigned_to_id %}{{ activity.to_assignee.name if activity.to_assignee else "Staff account unavailable" }}{% else %}Unassigned{% endif %}</strong>.</p>
+          {% else %}<p>Enquiry activity recorded.</p>{% endif %}
+          <span>By {{ activity.actor.name if activity.actor else "Staff account unavailable" }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}<p class="enquiry-secondary">No activity has been recorded yet.</p>{% endif %}
+    </section>
+
+    <section class="enquiry-card" aria-labelledby="notes-heading">
+      <div class="enquiry-card-heading"><div><p class="eyebrow">Staff only</p><h2 id="notes-heading">Internal notes</h2></div></div>
+      {% if enquiry.notes %}
+      <div class="enquiry-record-list">
+        {% for note in enquiry.notes|sort(attribute="created_at", reverse=true) %}
+        <article><div class="enquiry-record-meta"><strong>{{ note.author.name if note.author else "Staff account unavailable" }}</strong><time datetime="{{ note.created_at.isoformat() }}">{{ note.created_at.strftime("%d %b %Y · %H:%M UTC") }}</time></div><div class="enquiry-record-body">{{ note.note }}</div></article>
+        {% endfor %}
+      </div>
+      {% else %}<p class="enquiry-secondary">No internal notes have been added.</p>{% endif %}
+      {% if can_add_note %}
+      <form class="enquiry-action-form enquiry-note-form" method="post" action="/admin/enquiries/{{ enquiry.id }}/notes">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="expected_updated_at" value="{{ expected_updated_at }}">
+        <label for="note-text">Add an internal note</label>
+        <textarea id="note-text" name="note_text" rows="4" maxlength="5000" required></textarea>
+        <p class="enquiry-form-hint">Visible to staff only. Notes cannot be edited or deleted.</p>
+        <button class="button button-primary" type="submit">Add note</button>
+      </form>
+      {% endif %}
+    </section>
+
+    <section class="enquiry-card" aria-labelledby="replies-heading">
+      <div class="enquiry-card-heading"><div><p class="eyebrow">Customer responses</p><h2 id="replies-heading">Replies</h2></div></div>
+      {% if ai_reply_failure_message %}<p class="ai-safe-failure" role="status">{{ ai_reply_failure_message }}</p>{% endif %}
+      {% if can_draft_reply %}
+      <div class="ai-reply-draft-panel">
+        <p class="enquiry-form-hint">AI can prepare editable reply wording and add current database-backed package information. It does not approve or send replies.</p>
+        {% if ai_reply_drafting_available %}
+        <form class="enquiry-inline-action" method="post" action="/admin/enquiries/{{ enquiry.id }}/replies/ai-draft">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="ai_draft_request_id" value="{{ ai_draft_request_id }}">
+          <input type="hidden" name="expected_enquiry_updated_at" value="{{ expected_updated_at }}">
+          <button class="button button-secondary" type="submit">Generate AI reply draft</button>
+        </form>
+        {% else %}<p class="enquiry-secondary">AI reply drafting is unavailable. You can still write and save a reply below.</p>{% endif %}
+      </div>
+      {% endif %}
+      {% if enquiry.replies %}
+      <div class="enquiry-record-list">
+        {% for reply in enquiry.replies|sort(attribute="created_at", reverse=true) %}
+        <article>
+          <div class="enquiry-record-meta"><strong>{{ reply.author.name if reply.author else "Staff account unavailable" }}</strong><time datetime="{{ reply.created_at.isoformat() }}">{{ reply.created_at.strftime("%d %b %Y · %H:%M UTC") }}</time></div>
+          <span class="reply-status reply-status-{{ reply.status }}">{{ reply.status|replace("_", " ")|title }}</span>
+          {% if reply.source_ai_suggestion_id %}<p class="ai-reply-provenance">AI-assisted draft{% if reply.source_ai_suggestion and reply.source_ai_suggestion.extraction_review_status in ["accepted", "corrected"] %} · based on staff-reviewed extraction{% else %} · extraction context was provisional or unavailable{% endif %}. This reply remains {{ reply.status|replace("_", " ") }} and has not been sent by the application.</p>{% endif %}
+          {% if reply.status == "draft" and can_draft_reply %}
+          <form class="enquiry-action-form" method="post" action="/admin/enquiries/{{ enquiry.id }}/replies/{{ reply.id }}/edit">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="expected_enquiry_updated_at" value="{{ expected_updated_at }}">
+            <input type="hidden" name="expected_reply_updated_at" value="{{ reply.updated_at.isoformat() }}">
+            <label for="reply-body-{{ reply.id }}">Edit draft reply</label>
+            <textarea id="reply-body-{{ reply.id }}" name="body" rows="5" maxlength="{{ max_reply_body_length }}" required>{{ reply.body }}</textarea>
+            <button class="button button-secondary" type="submit">Save draft</button>
+          </form>
+          {% else %}<div class="enquiry-record-body">{{ reply.body }}</div>{% endif %}
+          {% if reply.approved_at %}<p class="enquiry-audit-meta">Approved by {{ reply.approved_by.name if reply.approved_by else "Staff account unavailable" }} · {{ reply.approved_at.strftime("%d %b %Y · %H:%M UTC") }}</p>{% endif %}
+          {% if reply.manually_sent_at %}<p class="enquiry-audit-meta">Marked manually sent by {{ reply.manually_sent_by.name if reply.manually_sent_by else "Staff account unavailable" }} · {{ reply.manually_sent_at.strftime("%d %b %Y · %H:%M UTC") }}</p>{% endif %}
+          {% if reply.status == "draft" and can_approve_reply %}
+          <form class="enquiry-inline-action" method="post" action="/admin/enquiries/{{ enquiry.id }}/replies/{{ reply.id }}/approve">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="expected_enquiry_updated_at" value="{{ expected_updated_at }}">
+            <input type="hidden" name="expected_reply_updated_at" value="{{ reply.updated_at.isoformat() }}">
+            <button class="button button-primary" type="submit">Approve reply</button>
+            <span class="enquiry-form-hint">Approval does not send this reply.</span>
+          </form>
+          {% elif reply.status == "approved" and (staff.role in ["admin", "editor"] or (staff.role == "consultant" and reply.author_id == staff.id)) %}
+          <a class="button button-secondary enquiry-record-sent-link" href="/admin/enquiries/{{ enquiry.id }}/replies/{{ reply.id }}/manual-sent/confirm">Record manually sent</a>
+          {% endif %}
+          {% if reply.status in ["approved", "manually_sent"] and can_draft_reply %}
+          <details class="reply-correction-details">
+            <summary>Draft a correction to this reply</summary>
+            <form class="enquiry-action-form" method="post" action="/admin/enquiries/{{ enquiry.id }}/replies">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="expected_enquiry_updated_at" value="{{ expected_updated_at }}">
+              <input type="hidden" name="supersedes_reply_id" value="{{ reply.id }}">
+              <label for="correction-body-{{ reply.id }}">Correction draft</label>
+              <textarea id="correction-body-{{ reply.id }}" name="body" rows="5" maxlength="{{ max_reply_body_length }}" required></textarea>
+              <p class="enquiry-form-hint">This creates a new draft linked to the selected approved reply. It does not edit or send the original.</p>
+              <button class="button button-secondary" type="submit">Save correction draft</button>
+            </form>
+          </details>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+      {% else %}<p class="enquiry-secondary">No replies have been recorded.</p>{% endif %}
+      {% if can_draft_reply %}
+      <form class="enquiry-action-form enquiry-reply-form" method="post" action="/admin/enquiries/{{ enquiry.id }}/replies">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="expected_enquiry_updated_at" value="{{ expected_updated_at }}">
+        <label for="new-reply-body">Draft a customer reply</label>
+        <textarea id="new-reply-body" name="body" rows="6" maxlength="{{ max_reply_body_length }}" required></textarea>
+        <p class="enquiry-form-hint">Saving creates a draft only. An administrator must approve it before any staff member records that it was manually sent.</p>
+        <button class="button button-primary" type="submit">Save reply draft</button>
+      </form>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside class="enquiry-workspace-side" aria-label="Traveller contact and consent">
+    {% if can_update_status and next_statuses %}
+    <section class="enquiry-card">
+      <p class="eyebrow">Workflow</p><h2>Update status</h2>
+      <form class="enquiry-action-form" method="post" action="/admin/enquiries/{{ enquiry.id }}/status">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="expected_updated_at" value="{{ expected_updated_at }}">
+        <label for="new-status">Move to</label>
+        <select id="new-status" name="new_status" required>
+          {% for status in next_statuses %}<option value="{{ status }}">{{ status|replace("_", " ")|title }}</option>{% endfor %}
+        </select>
+        <button class="button button-primary" type="submit">Update status</button>
+      </form>
+    </section>
+    {% endif %}
+    {% if can_assign %}
+    <section class="enquiry-card">
+      <p class="eyebrow">Ownership</p><h2>Assignment</h2>
+      <form class="enquiry-action-form" method="post" action="/admin/enquiries/{{ enquiry.id }}/assignment">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="expected_updated_at" value="{{ expected_updated_at }}">
+        <label for="assigned-to">Assigned consultant</label>
+        <select id="assigned-to" name="assigned_to_id">
+          <option value=""{% if not enquiry.assigned_to_id %} selected{% endif %}>Unassigned</option>
+          {% for consultant in active_consultants %}<option value="{{ consultant.id }}"{% if enquiry.assigned_to_id == consultant.id %} selected{% endif %}>{{ consultant.name }}</option>{% endfor %}
+        </select>
+        <button class="button button-primary" type="submit">Save assignment</button>
+      </form>
+    </section>
+    {% endif %}
+    <section class="enquiry-card">
+      <p class="eyebrow">Contact details</p>
+      <h2>Traveller</h2>
+      <dl class="enquiry-detail-list enquiry-contact-details">
+        <div><dt>Name</dt><dd>{{ enquiry.customer_name or "Not recorded" }}</dd></div>
+        <div><dt>Email</dt><dd>{% if enquiry.customer_email %}<a href="mailto:{{ enquiry.customer_email }}">{{ enquiry.customer_email }}</a>{% else %}Not provided{% endif %}</dd></div>
+        <div><dt>Phone</dt><dd>{% if enquiry.customer_phone %}<a href="tel:{{ enquiry.customer_phone }}">{{ enquiry.customer_phone }}</a>{% else %}Not provided{% endif %}</dd></div>
+      </dl>
+    </section>
+
+    <section class="enquiry-card">
+      <p class="eyebrow">Recorded permissions</p>
+      <h2>Consent</h2>
+      <dl class="enquiry-detail-list">
+        <div><dt>Response notice</dt><dd>{% if enquiry.response_notice_version %}Acknowledged · {{ enquiry.response_notice_version }}{% if enquiry.response_notice_accepted_at %}<span>{{ enquiry.response_notice_accepted_at.strftime("%d %b %Y · %H:%M UTC") }}</span>{% endif %}{% else %}Not recorded{% endif %}</dd></div>
+        <div><dt>WhatsApp</dt><dd>{% if enquiry.whatsapp_consent %}Consent recorded{% if enquiry.whatsapp_consent_at %}<span>{{ enquiry.whatsapp_consent_at.strftime("%d %b %Y · %H:%M UTC") }}</span>{% endif %}{% else %}No WhatsApp consent{% endif %}</dd></div>
+      </dl>
+    </section>
+  </aside>
+</div>
+{% endblock %}
+

@@ -1,0 +1,19 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<section class="package-action-result restore-result">
+  <p class="eyebrow">Version restoration</p>
+  <h1>Restoration needs attention</h1>
+  <p class="package-action-message">{{ message }}</p>
+  {% if errors %}
+  <div class="package-form-errors" role="alert">
+    <h2>Snapshot validation</h2>
+    <ul>{% for field, messages in errors.items() %}{% for item in messages %}<li><strong>{{ field|replace("_", " ")|title }}:</strong> {{ item }}</li>{% endfor %}{% endfor %}</ul>
+  </div>
+  {% endif %}
+  <div class="review-actions">
+    <a class="button button-dark" href="/admin/packages/{{ package_id }}/versions/{{ version_id }}/restore">Reload confirmation</a>
+    <a class="button button-outline" href="/admin/packages/{{ package_id }}/versions">Back to version history</a>
+  </div>
+</section>
+{% endblock %}

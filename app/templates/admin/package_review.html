@@ -1,0 +1,71 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<section class="review-heading">
+  <a class="text-link text-link-small" href="/admin/packages">← Back to packages</a>
+  <p class="eyebrow">Administrator review</p>
+  <h1>{{ package.title }}</h1>
+  <p class="package-editor-code">{{ package.package_code }} · {{ package.status|title }}</p>
+  <a class="text-link text-link-small" href="/admin/packages/{{ package.id }}/versions">Version history</a>
+</section>
+
+{% if package.status == "draft" %}
+<div class="pending-edit-notice" role="status">This draft has not been published. Review the saved package content and preview it before its first publication.</div>
+<div class="review-actions"><a class="button button-dark" href="/admin/packages/{{ package.id }}/preview">Preview this draft</a><a class="button button-outline" href="/admin/packages/{{ package.id }}/edit">Edit draft</a></div>
+<form class="package-state-form" method="post" action="/admin/packages/{{ package.id }}/publish" onsubmit="return window.confirm('Publish this package now? It will become visible on public pages.')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="expected_updated_at" value="{{ expected_updated_at }}">
+  <button class="button button-dark" type="submit">Publish package</button>
+</form>
+<section class="review-panel" aria-labelledby="draft-content-heading">
+  <div class="review-panel-heading"><p class="eyebrow">First publication review</p><h2 id="draft-content-heading">Saved draft content</h2></div>
+  {% for field in review_fields %}
+  <div class="review-draft-row"><h3>{{ field.label }}</h3><div class="review-value">{{ field.proposed }}</div></div>
+  {% endfor %}
+</section>
+<section class="review-panel" aria-labelledby="draft-prices-heading">
+  <div class="review-panel-heading"><p class="eyebrow">Seasonal prices</p><h2 id="draft-prices-heading">Saved draft prices</h2><p>Amounts are INR per person, twin sharing. GST treatment is not specified.</p></div>
+  {% if proposed_prices %}<ul class="review-price-list">{% for price in proposed_prices %}<li><strong>{{ price.season_name }}</strong><span>{{ price.start_month|month_name }}–{{ price.end_month|month_name }}</span><b>{{ price.price_per_person|money(price.currency) }}</b>{% if price.valid_from and price.valid_until %}<small>{{ price.valid_from.strftime("%d %b %Y") }} – {{ price.valid_until.strftime("%d %b %Y") }}</small>{% endif %}</li>{% endfor %}</ul>{% else %}<p>No seasonal prices have been added to this draft.</p>{% endif %}
+</section>
+{% elif pending_changes %}
+<div class="pending-edit-notice" role="status">Pending changes{% if pending_updated_by %} last saved by {{ pending_updated_by }}{% endif %}. Public pages still use the current published content.</div>
+<div class="review-actions"><a class="button button-dark" href="/admin/packages/{{ package.id }}/preview">Preview proposed changes</a><a class="button button-outline" href="/admin/packages/{{ package.id }}/edit">Edit pending changes</a></div>
+<form class="package-state-form" method="post" action="/admin/packages/{{ package.id }}/publish" onsubmit="return window.confirm('Publish these pending changes now? They will replace the current public package content.')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="expected_base_updated_at" value="{{ expected_base_updated_at }}">
+  <input type="hidden" name="expected_draft_updated_at" value="{{ expected_draft_updated_at }}">
+  <button class="button button-dark" type="submit">Publish pending changes</button>
+</form>
+
+<section class="review-panel" aria-labelledby="content-comparison-heading">
+  <div class="review-panel-heading"><p class="eyebrow">Content comparison</p><h2 id="content-comparison-heading">Live package and proposed changes</h2></div>
+  <div class="review-column-headings"><span>Package detail</span><span>Published now</span><span>Pending changes</span></div>
+  {% for field in review_fields %}
+  <div class="review-comparison-row">
+    <h3>{{ field.label }}</h3>
+    <div class="review-value">{{ field.current }}</div>
+    <div class="review-value">{{ field.proposed }}</div>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="review-panel" aria-labelledby="price-comparison-heading">
+  <div class="review-panel-heading"><p class="eyebrow">Seasonal prices</p><h2 id="price-comparison-heading">Live and proposed prices</h2><p>Amounts are INR per person, twin sharing. GST treatment is not specified.</p></div>
+  <div class="review-price-columns">
+    <div><h3>Published now</h3>
+      {% if live_prices %}<ul class="review-price-list">{% for price in live_prices %}<li><strong>{{ price.season_name }}</strong><span>{{ price.start_month|month_name }}–{{ price.end_month|month_name }}</span><b>{{ price.price_per_person|money(price.currency) }}</b>{% if price.valid_from and price.valid_until %}<small>{{ price.valid_from.strftime("%d %b %Y") }} – {{ price.valid_until.strftime("%d %b %Y") }}</small>{% endif %}</li>{% endfor %}</ul>{% else %}<p>No published prices.</p>{% endif %}
+    </div>
+    <div><h3>Pending changes</h3>
+      {% if proposed_prices %}<ul class="review-price-list">{% for price in proposed_prices %}<li><strong>{{ price.season_name }}</strong><span>{{ price.start_month|month_name }}–{{ price.end_month|month_name }}</span><b>{{ price.price_per_person|money(price.currency) }}</b>{% if price.valid_from and price.valid_until %}<small>{{ price.valid_from.strftime("%d %b %Y") }} – {{ price.valid_until.strftime("%d %b %Y") }}</small>{% endif %}</li>{% endfor %}</ul>{% else %}<p>No proposed prices.</p>{% endif %}
+    </div>
+  </div>
+</section>
+{% else %}
+<div class="dashboard-empty review-no-pending"><span class="empty-mark" aria-hidden="true">—</span><h2>No pending changes</h2><p>This published package currently has no private changes to review.</p><a class="text-link" href="/admin/packages/{{ package.id }}/edit">Open package editor</a></div>
+<form class="package-state-form" method="post" action="/admin/packages/{{ package.id }}/unpublish" onsubmit="return window.confirm('Unpublish this package? It will move to Draft and disappear from public pages.')">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="expected_updated_at" value="{{ expected_updated_at }}">
+  <button class="button button-outline" type="submit">Unpublish package</button>
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,29 @@
+<article class="package-card">
+  <a class="package-card-link" href="/packages/{{ package.slug }}" aria-label="View {{ package.title }}">
+    {% set media = package_destination_media(package) %}
+    <div class="package-card-image-wrap">
+      <img class="package-card-image" src="{{ media.hero.image }}" alt="{{ media.hero.alt }}" width="800" height="520" {% if loop is defined and loop.index <= 3 %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+      <span class="package-image-label">{{ media.hero.name }}</span>
+    </div>
+    <div class="package-card-body">
+      <div class="package-card-topline">
+        <span class="package-code">{{ package.package_code }}</span>
+        {% if package.duration_days %}<span>{{ package.duration_days }} days</span>{% endif %}
+      </div>
+      <h3>{{ package.title }}</h3>
+      {% if media.destinations %}<p class="package-destinations"><span class="sr-only">Destinations: </span>{{ media.destinations|map(attribute="name")|join(" · ") }}</p>{% endif %}
+      {% if package.hotel_category %}<p class="package-category">{{ package.hotel_category }} category</p>{% endif %}
+      {% if package.summary %}<p class="package-summary">{{ package.summary }}</p>{% endif %}
+      <div class="card-prices">
+        {% for price in package.prices %}
+        <div class="card-price-row">
+          <span>{{ price.season_name }} <small>{{ price.start_month|month_name }}–{{ price.end_month|month_name }}</small></span>
+          <strong>{{ price.price_per_person|money(price.currency) }}</strong>
+        </div>
+        {% endfor %}
+        {% if package.prices %}<p class="price-basis">per person, twin sharing · GST treatment not specified</p>{% endif %}
+      </div>
+      <span class="card-link">View journey <span aria-hidden="true">↗</span></span>
+    </div>
+  </a>
+</article>

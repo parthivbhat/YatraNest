@@ -1,0 +1,113 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<section class="dashboard-heading" aria-labelledby="dashboard-title">
+  <div>
+    <p class="eyebrow">Package management</p>
+    <h1 id="dashboard-title">Your journeys</h1>
+    <p class="dashboard-intro">Review every package and its latest update across the catalogue.</p>
+  </div>
+  <div class="dashboard-heading-actions">
+    <p class="package-count"><strong>{{ packages|length }}</strong> package{% if packages|length != 1 %}s{% endif %}<span>shown</span></p>
+    {% if staff.role in ["admin", "editor"] %}<a class="button button-dark dashboard-create-link" href="/admin/packages/new">Create package <span aria-hidden="true">+</span></a>{% endif %}
+  </div>
+</section>
+
+<section class="dashboard-panel" aria-label="Package catalogue">
+  <form class="package-filters" method="get" action="/admin/packages">
+    <label class="filter-search" for="package-search">
+      <span>Search packages</span>
+      <input id="package-search" name="q" type="search" value="{{ query }}" maxlength="100" placeholder="Name, code or destination">
+    </label>
+    <label class="filter-status" for="package-status">
+      <span>Status</span>
+      <select id="package-status" name="status">
+        <option value="" {% if not selected_status %}selected{% endif %}>All statuses</option>
+        {% for option in status_options %}
+        <option value="{{ option }}" {% if selected_status == option %}selected{% endif %}>{{ option|title }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button class="button button-dark filter-button" type="submit">Apply filters</button>
+    {% if query or selected_status %}<a class="clear-filters" href="/admin/packages">Clear</a>{% endif %}
+  </form>
+
+  {% if packages %}
+  <div class="package-table-scroll">
+    <table class="package-table">
+      <thead>
+        <tr>
+          <th scope="col">Package</th>
+          <th scope="col">Destination</th>
+          <th scope="col">Duration</th>
+          <th scope="col">Status</th>
+          <th scope="col">Last updated</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in packages %}
+        <tr>
+          <td data-label="Package">
+            <div class="package-main">
+              <span class="package-code">{{ row.package.package_code }}</span>
+              <span class="package-title">{{ row.package.title }}</span>
+            </div>
+          </td>
+          <td data-label="Destination">{{ row.destination_label }}</td>
+          <td data-label="Duration">{% if row.package.duration_days %}{{ row.package.duration_days }} days{% else %}Not specified{% endif %}</td>
+          <td data-label="Status">
+            <span class="status-badge status-{{ row.package.status }}">{{ row.package.status|title }}</span>
+            {% if row.has_pending_changes %}<span class="pending-badge">Pending changes</span>{% endif %}
+          </td>
+          <td data-label="Last updated">
+            <span class="updated-date">{{ row.package.updated_at.strftime("%d %b %Y") }}</span>
+            <span class="updated-by">by {{ row.updated_by_label }}</span>
+          </td>
+          <td data-label="Actions" class="dashboard-package-actions">
+            {% if staff.role in ["admin", "editor"] and row.package.status == "draft" %}
+            <a class="dashboard-action-link" href="/admin/packages/{{ row.package.id }}/edit">Edit draft</a>
+            {% elif staff.role in ["admin", "editor"] and row.package.status == "published" %}
+            <a class="dashboard-action-link" href="/admin/packages/{{ row.package.id }}/edit">{% if row.has_pending_changes %}Edit pending changes{% else %}Edit published package{% endif %}</a>
+            {% elif row.package.status == "archived" %}
+            <span class="dashboard-locked-action">Archived · read-only</span>
+            {% elif row.package.status == "published" %}
+            <span class="dashboard-locked-action">Published · read-only</span>
+            {% else %}
+            <span class="dashboard-locked-action">Read-only</span>
+            {% endif %}
+            {% if staff.role == "admin" and row.package.status in ["draft", "published"] %}
+            <a class="dashboard-action-link dashboard-secondary-action" href="/admin/packages/{{ row.package.id }}/review">{% if row.has_pending_changes %}Review pending changes{% elif row.package.status == "draft" %}Review draft{% else %}Review package{% endif %}</a>
+            {% endif %}
+            {% if staff.role == "admin" %}
+            <a class="dashboard-action-link dashboard-secondary-action" href="/admin/packages/{{ row.package.id }}/versions">Version history</a>
+            {% endif %}
+            {% if staff.role in ["admin", "editor"] and (row.package.status == "draft" or row.has_pending_changes) %}
+            <a class="dashboard-action-link dashboard-secondary-action" href="/admin/packages/{{ row.package.id }}/preview">Preview</a>
+            {% endif %}
+            {% if staff.role in ["admin", "editor"] %}
+            <form class="dashboard-duplicate-form" method="post" action="/admin/packages/{{ row.package.id }}/duplicate">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button class="dashboard-duplicate-button" type="submit">Duplicate</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="dashboard-empty">
+    <span class="empty-mark" aria-hidden="true">—</span>
+    <h2>No packages found</h2>
+    <p>Try another search or status filter.</p>
+  </div>
+  {% endif %}
+</section>
+{% if staff.role == "consultant" %}
+<p class="dashboard-permission-note">Your access is read-only.</p>
+{% else %}
+<p class="dashboard-permission-note">Published edits are saved as pending changes and do not affect public pages. Archived packages remain read-only.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<section class="review-heading history-heading">
+  <a class="text-link text-link-small" href="/admin/packages/{{ package.id }}/versions/{{ version.id }}">← Back to historical version</a>
+  <p class="eyebrow">Administrator confirmation</p>
+  <h1>Restore version {{ version.version_number }}?</h1>
+  <p class="package-editor-code">{{ package.package_code }} · {{ package.title }}</p>
+  <p class="history-attribution">Source recorded {{ version.created_at.strftime("%d %b %Y · %H:%M %Z") }} · {{ version.change_note or "Package snapshot" }}</p>
+</section>
+
+{% if message %}
+<div class="history-warning" role="alert"><strong>Restoration is unavailable.</strong><p>{{ message }}</p></div>
+{% else %}
+<div class="historical-readonly-notice" role="note">
+  This restores the historical package content and seasonal prices. It preserves the current package code, URL slug, publication status, published timestamp, scheduled-publication time, and creator. The current state and restored state will each be appended as new audit snapshots.
+</div>
+{% endif %}
+
+{% if warnings %}
+<div class="history-warning" role="status"><strong>Snapshot notes</strong><ul>{% for warning in warnings %}<li>{{ warning }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+<section class="review-panel history-fields" aria-labelledby="restore-content-heading">
+  <div class="review-panel-heading"><p class="eyebrow">Selected historical content</p><h2 id="restore-content-heading">Version {{ version.version_number }}</h2></div>
+  {% for field in fields %}
+  <div class="review-draft-row"><h3>{{ field.label }}</h3><div class="review-value">{{ field.value }}</div></div>
+  {% endfor %}
+</section>
+
+<section class="review-panel history-prices" aria-labelledby="restore-prices-heading">
+  <div class="review-panel-heading"><p class="eyebrow">Seasonal pricing</p><h2 id="restore-prices-heading">Prices that will be restored</h2></div>
+  {% if prices %}
+  <ul class="review-price-list">
+    {% for price in prices %}
+      {% if price.valid %}
+      <li><strong>{{ price.season_name }}</strong><span>{{ price.season_label }}</span><b>{{ price.price_per_person|money(price.currency) }} per person</b><small>{{ price.currency }} · {{ price.price_basis }}{% if price.price_note %} · {{ price.price_note }}{% endif %}</small>{% if price.valid_from or price.valid_until %}<small>Valid {{ price.valid_from.strftime("%d %b %Y") if price.valid_from else "from any date" }} – {{ price.valid_until.strftime("%d %b %Y") if price.valid_until else "open ended" }}</small>{% endif %}</li>
+      {% else %}<li class="version-invalid-price"><strong>Uninterpreted historical price</strong><pre>{{ price.raw }}</pre></li>{% endif %}
+    {% endfor %}
+  </ul>
+  {% else %}<p>No seasonal prices are present in this snapshot. A snapshot without at least one valid price cannot be restored.</p>{% endif %}
+</section>
+
+<section class="restore-confirm-actions">
+  {% if not message %}
+  <form method="post" action="/admin/packages/{{ package.id }}/versions/{{ version.id }}/restore" onsubmit="return window.confirm('Restore the content and prices from version {{ version.version_number }}? The package identity and current publication state will be preserved.')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="expected_updated_at" value="{{ expected_updated_at }}">
+    <button class="button button-dark" type="submit">Confirm restoration</button>
+  </form>
+  {% endif %}
+  <a class="button button-outline" href="/admin/packages/{{ package.id }}/versions">Cancel · back to history</a>
+</section>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/admin.css">
+{% endblock %}
+
+{% block content %}
+<div class="private-preview-banner" role="status">
+  <div>
+    <strong>{% if pending_changes %}Pending changes preview{% else %}Draft preview{% endif %}</strong>
+    <span>This private page is visible to signed-in package staff only. It does not publish this content.</span>
+  </div>
+  <a class="button button-outline" href="/admin/packages">Staff dashboard</a>
+</div>
+{% set private_preview = true %}
+{% include "packages/_package_presentation.html" %}
+{% endblock %}

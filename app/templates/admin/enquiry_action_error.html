@@ -1,0 +1,10 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<section class="enquiry-action-error">
+  <p class="eyebrow">Enquiry workflow</p>
+  <h1>Action not completed</h1>
+  <p>{{ error_message }}</p>
+  <a class="button button-primary" href="{{ enquiry_url }}">Return to enquiry</a>
+</section>
+{% endblock %}

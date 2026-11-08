@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="blog-hero"><p class="eyebrow">YatraNest journal</p><h1>Stories for the road ahead</h1><p>Destination inspiration and practical ideas for thoughtful journeys across India.</p></section>
+<main class="blog-listing" aria-label="Travel stories">
+  {% if categories %}<nav class="blog-categories" aria-label="Blog categories"><a href="/blog"{% if not selected_category %} aria-current="page"{% endif %}>All stories</a>{% for category in categories %}<a href="/blog?category={{ category|urlencode }}"{% if category == selected_category %} aria-current="page"{% endif %}>{{ category }}</a>{% endfor %}</nav>{% endif %}
+  {% if posts %}<div class="blog-card-grid">
+    {% for post in posts %}<article class="blog-card">
+      <a class="blog-card-image" href="/blog/{{ post.slug }}" aria-label="Read {{ post.title }}">{% if post.cover_image_path %}<img src="{{ post.cover_image_path }}" alt="{{ post.cover_image_alt or '' }}" loading="lazy">{% else %}<div class="blog-image-fallback" aria-hidden="true">YatraNest</div>{% endif %}</a>
+      <div class="blog-card-body"><p class="eyebrow">{{ post.category }}{% if post.published_at %} · {{ post.published_at.strftime("%d %b %Y") }}{% endif %}</p><h2><a href="/blog/{{ post.slug }}">{{ post.title }}</a></h2><p>{{ post.content|striptags|truncate(220, true, "…") }}</p><a class="text-link" href="/blog/{{ post.slug }}">Read story <span aria-hidden="true">→</span></a></div>
+    </article>{% endfor %}
+  </div>{% else %}<div class="blog-empty"><h2>No stories in this category yet</h2><p>Browse all travel stories or explore our journeys.</p><a class="button button-primary" href="/packages">Explore journeys</a></div>{% endif %}
+  {% if page_count > 1 %}<nav class="blog-pagination" aria-label="Blog pages">{% if page > 1 %}<a href="/blog?page={{ page - 1 }}{% if selected_category %}&category={{ selected_category|urlencode }}{% endif %}">Previous</a>{% endif %}<span>Page {{ page }} of {{ page_count }}</span>{% if page < page_count %}<a href="/blog?page={{ page + 1 }}{% if selected_category %}&category={{ selected_category|urlencode }}{% endif %}">Next</a>{% endif %}</nav>{% endif %}
+</main>
+{% endblock %}

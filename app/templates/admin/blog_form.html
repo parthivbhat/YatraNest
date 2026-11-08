@@ -1,0 +1,25 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<section class="blog-editor-heading"><a class="text-link" href="/admin/blog">← Back to blog</a><p class="eyebrow">{{ "Edit draft" if post else "New draft" }}</p><h1>{{ post.title if post else "Create a travel story" }}</h1><p>Save as a draft, preview it, then publish when ready.</p></section>
+{% if errors %}<div class="blog-form-errors" role="alert"><strong>Please review:</strong><ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+<form class="blog-editor-form" method="post" enctype="multipart/form-data" action="{{ '/admin/blog/' ~ post.id ~ '/edit' if post else '/admin/blog' }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  {% for name, label, maxlength in [('title','Title',240), ('slug','URL slug',180), ('category','Category',100)] %}
+  <label>{{ label }}<input name="{{ name }}" maxlength="{{ maxlength }}" value="{{ values.get(name, '') }}" {% if name != 'slug' %}required{% endif %}>{% if name == 'slug' %}<small>Leave blank to generate a clean slug from the title.</small>{% endif %}</label>
+  {% endfor %}
+  <label>Article content<textarea name="content" rows="18" maxlength="100000" required>{{ values.get('content', '') }}</textarea><small>Plain text is escaped safely on public pages; separate paragraphs with blank lines.</small></label>
+  <section class="blog-form-panel"><h2>Cover image</h2>
+    {% if post and post.cover_image_path %}<img class="blog-editor-cover" src="{{ post.cover_image_path }}" alt="{{ post.cover_image_alt or '' }}"><p>Upload a new JPEG or PNG to replace it. Maximum 5 MB.</p>{% else %}<p>Optional JPEG or PNG, maximum 5 MB. The file is checked and stored with a generated name.</p>{% endif %}
+    <label>Cover image upload<input type="file" name="cover_image" accept="image/jpeg,image/png"></label>
+    <label>Cover image alt text<input name="cover_image_alt" maxlength="200" value="{{ values.get('cover_image_alt', '') }}" placeholder="Describe the meaningful image"></label>
+  </section>
+  <section class="blog-form-panel"><h2>SEO metadata</h2>
+    <label>SEO title<input name="seo_title" maxlength="160" value="{{ values.get('seo_title', '') }}"></label>
+    <label>Meta description<textarea name="seo_description" rows="3" maxlength="320">{{ values.get('seo_description', '') }}</textarea></label>
+  </section>
+  <section class="blog-form-panel"><h2>Related published journeys</h2><p>Only published packages can be selected. Their current publication state is checked again when saving.</p>
+    {% if packages %}<div class="blog-package-checks">{% for package in packages %}<label><input type="checkbox" name="related_package_ids" value="{{ package.id }}"{% if package.id|string in selected_package_ids %} checked{% endif %}> <span><strong>{{ package.title }}</strong><small>{{ package.package_code }}{% if package.duration_days %} · {{ package.duration_days }} days{% endif %}</small></span></label>{% endfor %}</div>{% else %}<p>No published packages are available yet.</p>{% endif %}
+  </section>
+  <div class="blog-editor-actions"><a class="button button-outline" href="/admin/blog">Cancel</a><button class="button button-primary" type="submit">Save draft and preview</button></div>
+</form>
+{% endblock %}

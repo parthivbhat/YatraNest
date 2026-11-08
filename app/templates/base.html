@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="{{ meta_description }}">
+    <meta name="theme-color" content="#f7f7f2">
+    <link rel="canonical" href="{{ canonical_url }}">
+    <link rel="icon" type="image/svg+xml" href="/static/images/yatranest-mark.svg">
+    <link rel="stylesheet" href="/static/css/site.css">
+    {% if robots %}<meta name="robots" content="{{ robots }}">{% endif %}
+    {% block extra_head %}{% endblock %}
+    <title>{{ page_title }}</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="/" aria-label="YatraNest home">
+          <span class="brand-mark" aria-hidden="true">Y</span>
+          <span>Yatra<span class="brand-light">Nest</span></span>
+        </a>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="nav-toggle-line"></span>
+          <span class="nav-toggle-line"></span>
+        </button>
+        <nav class="site-nav" id="site-nav" aria-label="Main navigation">
+          <a href="/packages" {% if request.url.path.startswith('/packages') %}aria-current="page"{% endif %}>Journeys</a>
+          <a href="/blog" {% if request.url.path.startswith('/blog') %}aria-current="page"{% endif %}>Stories</a>
+          <a class="nav-cta" href="/packages">Explore packages <span aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <a class="brand brand-footer" href="/" aria-label="YatraNest home">
+          <span class="brand-mark" aria-hidden="true">Y</span>
+          <span>Yatra<span class="brand-light">Nest</span></span>
+        </a>
+        <p>Based in Kochi, Kerala</p>
+        <a href="/packages">Browse journeys</a>
+        <a href="/static/images/IMAGE_CREDITS.html">Image credits</a>
+      </div>
+      <p class="footer-note">Package information and seasonal prices are shown as provided.</p>
+    </footer>
+    <script src="/static/js/site.js" defer></script>
+  </body>
+</html>

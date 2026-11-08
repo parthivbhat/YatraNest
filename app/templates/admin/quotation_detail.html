@@ -1,0 +1,31 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<section class="quote-page-heading">
+  <a class="text-link" href="/admin/enquiries/{{ quote.enquiry_id }}">← Back to enquiry</a>
+  {% if success %}<p class="quote-success" role="status">{{ success }}</p>{% endif %}
+  <div class="quote-title-row"><div><p class="eyebrow">Quotation · {{ quote.package_code_snapshot or "Package" }}</p><h1>{{ quote.package_title_snapshot }}</h1></div><span class="reply-status reply-status-{{ quote.status }}">{{ quote.status|title }}</span></div>
+  <p>Prepared for {{ quote.customer_name_snapshot }} · Created {{ quote.created_at.strftime("%d %b %Y · %H:%M UTC") }}</p>
+</section>
+<div class="quote-detail-grid">
+  <section class="quote-detail-card"><h2>Travel details</h2>
+    <dl class="quote-dl"><div><dt>Dates</dt><dd>{{ quote.travel_start_date.strftime("%d %b %Y") }} – {{ quote.travel_end_date.strftime("%d %b %Y") }}</dd></div><div><dt>Travellers</dt><dd>{{ quote.adults }} adults · {{ quote.children }} children · {{ quote.infants }} infants</dd></div><div><dt>Accommodation</dt><dd>{{ quote.accommodation }}</dd></div></dl>
+  </section>
+  <section class="quote-detail-card"><h2>Pricing</h2>
+    <dl class="quote-dl"><div><dt>Price source</dt><dd>{% if quote.price_source == "package_price" %}Stored package price{% else %}Manually entered by staff{% endif %}</dd></div><div><dt>Basis</dt><dd>{{ quote.price_basis|replace("_", " ") }}</dd></div><div><dt>Adult rate</dt><dd>{{ quote.adult_unit_price|money(quote.currency) }} per person</dd></div>
+    {% if quote.children %}<div><dt>Child fare</dt><dd>{% if quote.child_unit_price is not none %}{{ quote.child_unit_price|money(quote.currency) }} per child{% else %}Not set · confirmation required{% endif %}</dd></div>{% endif %}
+    {% if quote.infants %}<div><dt>Infant fare</dt><dd>{% if quote.infant_unit_price is not none %}{{ quote.infant_unit_price|money(quote.currency) }} per infant{% else %}Not set · confirmation required{% endif %}</dd></div>{% endif %}
+    {% if quote.subtotal_amount is none %}<div><dt>Total</dt><dd class="quote-total">Not calculated — staff must confirm missing fares</dd></div>{% else %}<div><dt>Subtotal</dt><dd>{{ quote.subtotal_amount|money(quote.currency) }}</dd></div>{% if quote.gst_rate_percent is not none %}<div><dt>GST added</dt><dd>{{ quote.gst_rate_percent }}% · {{ quote.gst_amount|money(quote.currency) }}</dd></div><div><dt>Quotation total</dt><dd class="quote-total">{{ quote.total_amount|money(quote.currency) }}</dd></div>{% else %}<div><dt>GST</dt><dd>Unspecified; confirm treatment</dd></div><div><dt>Total before GST</dt><dd class="quote-total">{{ quote.total_amount|money(quote.currency) }}</dd></div>{% endif %}{% endif %}
+    </dl>
+    {% if quote.price_source == "manual" or quote.child_unit_price is not none or quote.infant_unit_price is not none %}<p class="quote-caveat">{% if quote.staff_price_confirmed %}Staff marked manually entered fares as confirmed.{% else %}Staff price confirmation is required before approval.{% endif %}</p>{% endif %}
+  </section>
+  {% if quote.inclusions %}<section class="quote-detail-card"><h2>Inclusions</h2><div class="quote-preserved-text">{{ quote.inclusions }}</div></section>{% endif %}
+  {% if quote.exclusions %}<section class="quote-detail-card"><h2>Exclusions</h2><div class="quote-preserved-text">{{ quote.exclusions }}</div></section>{% endif %}
+  {% if quote.payment_terms %}<section class="quote-detail-card"><h2>Payment terms</h2><div class="quote-preserved-text">{{ quote.payment_terms }}</div></section>{% endif %}
+</div>
+<section class="quote-actions-card"><p class="quote-caveat">A quotation is not a confirmed booking. This application does not send messages or reserve package inventory.</p>
+  <div class="quote-action-row"><a class="button button-outline" href="/admin/quotations/{{ quote.id }}/pdf">Download PDF</a>
+  {% if quote.status == "draft" and staff.role == "admin" %}<form method="post" action="/admin/quotations/{{ quote.id }}/approve" onsubmit="return window.confirm('Approve this quotation? Approval does not confirm a booking or send it to the traveller.')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="expected_updated_at" value="{{ quote.updated_at.isoformat() }}"><button class="button button-primary" type="submit">Approve quotation</button></form>{% endif %}
+  {% if quote.status == "approved" %}<form method="post" action="/admin/quotations/{{ quote.id }}/share-link"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button button-secondary" type="submit">Create private share link</button></form>{% endif %}</div>
+  {% if quote.approved_at %}<p class="quote-help">Approved by {{ quote.approved_by.name if quote.approved_by else "Staff account unavailable" }} · {{ quote.approved_at.strftime("%d %b %Y · %H:%M UTC") }}</p>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/admin.css">
+{% endblock %}
+
+{% block content %}
+<section class="staff-login section-wrap" aria-labelledby="login-heading">
+  <p class="eyebrow">Staff access</p>
+  <h1 id="login-heading">Welcome back</h1>
+  <p class="staff-login-intro">Sign in with your YatraNest staff account.</p>
+
+  {% if error %}
+  <p class="form-error" role="alert">{{ error }}</p>
+  {% endif %}
+
+  <form method="post" action="/admin/login" class="staff-login-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="staff-email">Email</label>
+    <input id="staff-email" name="email" type="email" autocomplete="username" maxlength="320" required>
+
+    <label for="staff-password">Password</label>
+    <input id="staff-password" name="password" type="password" autocomplete="current-password" maxlength="1024" required>
+
+    <button class="button button-dark" type="submit">Sign in <span aria-hidden="true">→</span></button>
+  </form>
+</section>
+{% endblock %}

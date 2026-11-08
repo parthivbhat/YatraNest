@@ -1,0 +1,92 @@
+<section class="enquiry-section" id="enquire" aria-labelledby="enquiry-heading">
+  <div class="enquiry-heading">
+    <p class="eyebrow">Start a conversation</p>
+    <h2 id="enquiry-heading">Enquire about this journey</h2>
+    <p>Share your plans and our team will use the contact details you provide to respond to this enquiry.</p>
+  </div>
+
+  <form class="enquiry-form" method="post" action="/packages/{{ package.slug }}/enquiries" novalidate>
+    <input type="hidden" name="form_nonce" value="{{ form_nonce }}">
+    <div class="enquiry-grid">
+      <div class="enquiry-field">
+        <label for="customer-name">Your name <span aria-hidden="true">*</span></label>
+        <input id="customer-name" name="customer_name" autocomplete="name" maxlength="160" required value="{{ form_values.get('customer_name', '') }}" {% if form_errors.get('customer_name') %}aria-invalid="true" aria-describedby="customer-name-error"{% endif %}>
+        {% if form_errors.get('customer_name') %}<p class="field-error" id="customer-name-error">{{ form_errors.customer_name }}</p>{% endif %}
+      </div>
+      <div class="enquiry-field">
+        <label for="customer-email">Email address</label>
+        <input id="customer-email" name="customer_email" type="email" autocomplete="email" maxlength="320" value="{{ form_values.get('customer_email', '') }}" {% if form_errors.get('customer_email') %}aria-invalid="true" aria-describedby="customer-email-error"{% endif %}>
+        {% if form_errors.get('customer_email') %}<p class="field-error" id="customer-email-error">{{ form_errors.customer_email }}</p>{% endif %}
+      </div>
+      <div class="enquiry-field">
+        <label for="customer-phone">Phone number</label>
+        <input id="customer-phone" name="customer_phone" type="tel" autocomplete="tel" maxlength="40" value="{{ form_values.get('customer_phone', '') }}" {% if form_errors.get('customer_phone') or form_errors.get('contact_method') %}aria-invalid="true" aria-describedby="customer-phone-error"{% endif %}>
+        {% if form_errors.get('customer_phone') %}<p class="field-error" id="customer-phone-error">{{ form_errors.customer_phone }}</p>{% elif form_errors.get('contact_method') %}<p class="field-error" id="customer-phone-error">{{ form_errors.contact_method }}</p>{% endif %}
+        <p class="field-hint">Provide an email address or phone number.</p>
+      </div>
+
+      <div class="enquiry-field enquiry-field-wide">
+        <fieldset class="date-fieldset">
+          <legend>When would you like to travel? <span aria-hidden="true">*</span></legend>
+          <div class="date-inputs">
+            <div>
+              <label for="travel-start-date">Start date</label>
+              <input id="travel-start-date" name="travel_start_date" type="date" required value="{{ form_values.get('travel_start_date', '') }}" {% if form_errors.get('travel_start_date') %}aria-invalid="true" aria-describedby="travel-start-error"{% endif %}>
+              {% if form_errors.get('travel_start_date') %}<p class="field-error" id="travel-start-error">{{ form_errors.travel_start_date }}</p>{% endif %}
+            </div>
+            <div>
+              <label for="travel-end-date">End date</label>
+              <input id="travel-end-date" name="travel_end_date" type="date" required value="{{ form_values.get('travel_end_date', '') }}" {% if form_errors.get('travel_end_date') %}aria-invalid="true" aria-describedby="travel-end-error"{% endif %}>
+              {% if form_errors.get('travel_end_date') %}<p class="field-error" id="travel-end-error">{{ form_errors.travel_end_date }}</p>{% endif %}
+            </div>
+          </div>
+          <label class="enquiry-check enquiry-flexible-check">
+            <input type="checkbox" name="travel_dates_flexible" value="yes" {% if form_values.get('travel_dates_flexible') == 'yes' %}checked{% endif %}>
+            <span>These dates are flexible; this range is an acceptable period.</span>
+          </label>
+        </fieldset>
+      </div>
+
+      <div class="enquiry-field enquiry-field-wide">
+        <fieldset class="traveller-fieldset">
+          <legend>Travellers</legend>
+          <div class="traveller-inputs">
+            <div><label for="adults">Adults</label><input id="adults" name="adults" type="number" min="1" max="999" step="1" required value="{{ form_values.get('adults', '1') }}" {% if form_errors.get('adults') %}aria-invalid="true" aria-describedby="adults-error"{% endif %}>{% if form_errors.get('adults') %}<p class="field-error" id="adults-error">{{ form_errors.adults }}</p>{% endif %}</div>
+            <div><label for="children">Children</label><input id="children" name="children" type="number" min="0" max="999" step="1" required value="{{ form_values.get('children', '0') }}" {% if form_errors.get('children') %}aria-invalid="true" aria-describedby="children-error"{% endif %}>{% if form_errors.get('children') %}<p class="field-error" id="children-error">{{ form_errors.children }}</p>{% endif %}</div>
+            <div><label for="infants">Infants</label><input id="infants" name="infants" type="number" min="0" max="999" step="1" required value="{{ form_values.get('infants', '0') }}" {% if form_errors.get('infants') %}aria-invalid="true" aria-describedby="infants-error"{% endif %}>{% if form_errors.get('infants') %}<p class="field-error" id="infants-error">{{ form_errors.infants }}</p>{% endif %}</div>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="enquiry-field">
+        <label for="budget-inr">Total budget (INR, optional)</label>
+        <input id="budget-inr" name="budget_amount_inr" type="number" min="0" max="9999999999.99" step="0.01" inputmode="decimal" value="{{ form_values.get('budget_amount_inr', '') }}" {% if form_errors.get('budget_amount_inr') %}aria-invalid="true" aria-describedby="budget-error"{% endif %}>
+        {% if form_errors.get('budget_amount_inr') %}<p class="field-error" id="budget-error">{{ form_errors.budget_amount_inr }}</p>{% endif %}
+      </div>
+      <div class="enquiry-field enquiry-field-wide">
+        <label for="original-message">Tell us about the trip you have in mind <span aria-hidden="true">*</span></label>
+        <textarea id="original-message" name="original_message" rows="6" maxlength="5000" required {% if form_errors.get('original_message') %}aria-invalid="true" aria-describedby="message-error"{% endif %}>{{ form_values.get('original_message', '') }}</textarea>
+        {% if form_errors.get('original_message') %}<p class="field-error" id="message-error">{{ form_errors.original_message }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="enquiry-consents">
+      <label class="enquiry-check {% if form_errors.get('response_notice_accepted') %}consent-invalid{% endif %}">
+        <input type="checkbox" name="response_notice_accepted" value="yes" required {% if form_values.get('response_notice_accepted') == 'yes' %}checked{% endif %} {% if form_errors.get('response_notice_accepted') %}aria-invalid="true" aria-describedby="response-notice-error"{% endif %}>
+        <span>I acknowledge that YatraNest will use my supplied contact details to respond to this enquiry. <span aria-hidden="true">*</span></span>
+      </label>
+      {% if form_errors.get('response_notice_accepted') %}<p class="field-error consent-error" id="response-notice-error">{{ form_errors.response_notice_accepted }}</p>{% endif %}
+      <label class="enquiry-check">
+        <input type="checkbox" name="whatsapp_consent" value="yes" {% if form_values.get('whatsapp_consent') == 'yes' %}checked{% endif %}>
+        <span>I separately consent to being contacted about this enquiry via WhatsApp. Optional.</span>
+      </label>
+      <p class="field-hint">WhatsApp consent is optional and is not required to submit this enquiry.</p>
+    </div>
+
+    <div class="enquiry-honeypot" aria-hidden="true">
+      <label for="website">Leave this field empty</label>
+      <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+    </div>
+    <button class="button button-dark enquiry-submit" type="submit">Send enquiry <span aria-hidden="true">→</span></button>
+  </form>
+</section>

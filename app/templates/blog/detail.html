@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="blog-article">
+  {% if preview %}<aside class="blog-preview-banner">
+    {% if post.status == 'published' %}
+      <strong>Published · visible publicly</strong>
+      <a class="button button-outline" href="/admin/blog/{{ post.id }}/edit">Edit post</a>
+      <form method="post" action="/admin/blog/{{ post.id }}/unpublish"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button button-outline" type="submit">Unpublish</button></form>
+    {% else %}
+      <strong>Staff preview · not publicly published</strong>
+      <a class="button button-outline" href="/admin/blog/{{ post.id }}/edit">Edit draft</a>
+      <form method="post" action="/admin/blog/{{ post.id }}/publish"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button button-primary" type="submit">Publish post</button></form>
+    {% endif %}
+  </aside>{% endif %}
+  <header class="blog-article-heading"><a class="text-link" href="/blog">← Travel stories</a><p class="eyebrow">{{ post.category }}{% if post.published_at %} · {{ post.published_at.strftime("%d %b %Y") }}{% endif %}</p><h1>{{ post.title }}</h1>{% if post.author %}<p>By {{ post.author.name }}</p>{% endif %}</header>
+  {% if post.cover_image_path %}<figure class="blog-article-cover"><img src="{{ post.cover_image_path }}" alt="{{ post.cover_image_alt or '' }}"></figure>{% endif %}
+  <div class="blog-article-content">{{ post.content }}</div>
+  {% if related_packages %}<section class="blog-related-packages"><p class="eyebrow">Keep exploring</p><h2>Related journeys</h2><div class="blog-related-grid">{% for package in related_packages %}<article><h3>{{ package.title }}</h3><p>{% if package.destinations %}{{ package.destinations|join(', ') }}{% endif %}{% if package.duration_days %} · {{ package.duration_days }} days{% endif %}</p><a class="button button-primary" href="/packages/{{ package.slug }}">View journey &amp; enquire</a></article>{% endfor %}</div></section>{% else %}<section class="blog-related-packages"><h2>Plan your next journey</h2><p>Explore published YatraNest packages and send the team your travel enquiry.</p><a class="button button-primary" href="/packages">Explore journeys</a></section>{% endif %}
+</article>
+{% endblock %}

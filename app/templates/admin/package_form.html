@@ -1,0 +1,166 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<section class="package-editor-heading">
+  <a class="text-link text-link-small" href="/admin/packages">← Back to packages</a>
+  <p class="eyebrow">{% if mode == "published_edit" %}Published package{% else %}Draft package{% endif %}</p>
+  <h1>{% if mode == "create" %}Create a package{% elif mode == "published_edit" %}Edit pending changes{% else %}Edit draft{% endif %}</h1>
+  {% if mode == "edit" or mode == "published_edit" %}<p class="package-editor-code">{{ package_code }} · identity and URL stay fixed</p>{% else %}<p class="package-editor-code">New packages are saved as drafts.</p>{% endif %}
+</section>
+
+{% if mode == "published_edit" %}
+<div class="pending-edit-notice" role="status">
+  {% if pending_changes %}
+  Pending changes{% if pending_updated_by %} last saved by {{ pending_updated_by }}{% endif %}. Saving updates this private draft only; the published page stays unchanged until a future admin publishing action.
+  {% else %}
+  You are editing a published package. Saving will create a private pending draft; public pages will continue to use the current published content.
+  {% endif %}
+</div>
+{% endif %}
+
+{% if errors %}
+<section class="package-form-errors" role="alert" aria-labelledby="form-errors-heading">
+  <h2 id="form-errors-heading">Review these details</h2>
+  <ul>
+    {% for field, messages in errors.items() %}
+      {% for message in messages %}<li>{% if field != "form" %}<strong>{{ field|replace("_", " ")|replace(".", " · ")|title }}:</strong> {% endif %}{{ message }}</li>{% endfor %}
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<form class="package-edit-form" method="post" action="{% if mode == 'create' %}/admin/packages/new{% else %}/admin/packages/{{ package_id }}/edit{% endif %}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  {% if mode == "edit" %}<input type="hidden" name="expected_updated_at" value="{{ expected_updated_at }}">{% endif %}
+  {% if mode == "published_edit" %}
+  <input type="hidden" name="expected_base_updated_at" value="{{ expected_base_updated_at }}">
+  <input type="hidden" name="expected_draft_updated_at" value="{{ expected_draft_updated_at }}">
+  {% endif %}
+
+  <section class="editor-section" aria-labelledby="basics-heading">
+    <div class="editor-section-heading"><span>01</span><div><h2 id="basics-heading">Package basics</h2><p>Start with the information staff has confirmed.</p></div></div>
+    <div class="editor-fields editor-fields-two">
+      {% if mode == "create" %}
+      <label>Package code <span class="required-label">Required</span>
+        <input name="package_code" maxlength="32" required value="{{ form_values.get('package_code') or '' }}" autocomplete="off">
+        <small>Letters, numbers and hyphens. Codes are stored in uppercase.</small>
+      </label>
+      {% else %}
+      <div class="readonly-field"><span>Package code</span><strong>{{ package_code }}</strong></div>
+      {% endif %}
+      <label>Package title <span class="required-label">Required</span>
+        <input name="title" maxlength="240" required value="{{ form_values.get('title') or '' }}">
+      </label>
+      <label>Short summary
+        <input name="summary" maxlength="500" value="{{ form_values.get('summary') or '' }}">
+      </label>
+      <label>Duration in days
+        <input name="duration_days" type="number" min="1" step="1" value="{{ form_values.get('duration_days') or '' }}">
+      </label>
+      <label>Accommodation category
+        <input name="hotel_category" maxlength="80" value="{{ form_values.get('hotel_category') or '' }}">
+      </label>
+      <label>Map URL
+        <input name="map_url" type="url" maxlength="500" placeholder="https://" value="{{ form_values.get('map_url') or '' }}">
+      </label>
+      <label class="editor-field-wide">Description
+        <textarea name="description" rows="5" maxlength="20000">{{ form_values.get('description') or '' }}</textarea>
+      </label>
+      <label class="editor-field-wide">Destinations <span class="field-hint">One per line</span>
+        <textarea name="destinations" rows="3">{{ form_values.get('destinations') or '' }}</textarea>
+      </label>
+    </div>
+  </section>
+
+  <section class="editor-section" aria-labelledby="prices-heading">
+    <div class="editor-section-heading"><span>02</span><div><h2 id="prices-heading">Seasonal prices</h2><p>Optional while saving a draft. Add only prices confirmed by staff.</p></div></div>
+    <p class="editor-price-disclosure">Amounts are INR per person, twin sharing. GST treatment is not specified.</p>
+    <div class="repeatable-list" data-repeatable-list="prices">
+      {% for row in price_rows %}
+      <fieldset class="repeatable-row price-editor-row">
+        <legend>Price season {{ loop.index }}</legend>
+        <label>Season name<input name="price_season_name" maxlength="100" value="{{ row.price_season_name or '' }}"></label>
+        <label>From month<input name="price_start_month" type="number" min="1" max="12" step="1" value="{{ row.price_start_month or '' }}"></label>
+        <label>Through month<input name="price_end_month" type="number" min="1" max="12" step="1" value="{{ row.price_end_month or '' }}"></label>
+        <label>Price per person (₹)<input name="price_per_person" type="number" min="0.01" step="0.01" value="{{ row.price_per_person or '' }}"></label>
+        <label>Valid from <span class="field-hint">Optional</span><input name="price_valid_from" type="date" value="{{ row.price_valid_from or '' }}"></label>
+        <label>Valid until <span class="field-hint">Optional</span><input name="price_valid_until" type="date" value="{{ row.price_valid_until or '' }}"></label>
+        <label class="price-note-field">Price note <span class="field-hint">Optional</span><input name="price_note" maxlength="2000" value="{{ row.price_note or '' }}"></label>
+        <button class="row-remove" type="button" data-remove-row aria-label="Remove price season {{ loop.index }}">Remove</button>
+      </fieldset>
+      {% endfor %}
+    </div>
+    <button class="button button-outline add-row-button" type="button" data-add-row="prices">Add a price season <span aria-hidden="true">+</span></button>
+    <template id="prices-row-template">
+      <fieldset class="repeatable-row price-editor-row">
+        <legend>Price season</legend>
+        <label>Season name<input name="price_season_name" maxlength="100"></label>
+        <label>From month<input name="price_start_month" type="number" min="1" max="12" step="1"></label>
+        <label>Through month<input name="price_end_month" type="number" min="1" max="12" step="1"></label>
+        <label>Price per person (₹)<input name="price_per_person" type="number" min="0.01" step="0.01"></label>
+        <label>Valid from <span class="field-hint">Optional</span><input name="price_valid_from" type="date"></label>
+        <label>Valid until <span class="field-hint">Optional</span><input name="price_valid_until" type="date"></label>
+        <label class="price-note-field">Price note <span class="field-hint">Optional</span><input name="price_note" maxlength="2000"></label>
+        <button class="row-remove" type="button" data-remove-row>Remove</button>
+      </fieldset>
+    </template>
+  </section>
+
+  <section class="editor-section" aria-labelledby="details-heading">
+    <div class="editor-section-heading"><span>03</span><div><h2 id="details-heading">Hotels and itinerary</h2><p>Leave these blank until details are confirmed.</p></div></div>
+    <h3 class="editor-subheading">Hotels</h3>
+    <div class="repeatable-list" data-repeatable-list="hotels">
+      {% for row in hotel_rows %}
+      <fieldset class="repeatable-row content-editor-row">
+        <legend>Hotel {{ loop.index }}</legend>
+        <label>Hotel name<input name="hotel_name" maxlength="240" value="{{ row.hotel_name or '' }}"></label>
+        <label>Location<input name="hotel_location" maxlength="240" value="{{ row.hotel_location or '' }}"></label>
+        <button class="row-remove" type="button" data-remove-row>Remove</button>
+      </fieldset>
+      {% endfor %}
+    </div>
+    <button class="button button-outline add-row-button" type="button" data-add-row="hotels">Add hotel <span aria-hidden="true">+</span></button>
+    <template id="hotels-row-template">
+      <fieldset class="repeatable-row content-editor-row">
+        <legend>Hotel</legend>
+        <label>Hotel name<input name="hotel_name" maxlength="240"></label>
+        <label>Location<input name="hotel_location" maxlength="240"></label>
+        <button class="row-remove" type="button" data-remove-row>Remove</button>
+      </fieldset>
+    </template>
+
+    <h3 class="editor-subheading">Day-wise itinerary</h3>
+    <div class="repeatable-list" data-repeatable-list="itinerary">
+      {% for row in itinerary_rows %}
+      <fieldset class="repeatable-row itinerary-editor-row">
+        <legend>Itinerary entry {{ loop.index }}</legend>
+        <label>Day<input name="itinerary_day" type="number" min="1" step="1" value="{{ row.itinerary_day or '' }}"></label>
+        <label>Title<input name="itinerary_title" maxlength="240" value="{{ row.itinerary_title or '' }}"></label>
+        <label>Description<input name="itinerary_description" maxlength="5000" value="{{ row.itinerary_description or '' }}"></label>
+        <button class="row-remove" type="button" data-remove-row>Remove</button>
+      </fieldset>
+      {% endfor %}
+    </div>
+    <button class="button button-outline add-row-button" type="button" data-add-row="itinerary">Add itinerary entry <span aria-hidden="true">+</span></button>
+    <template id="itinerary-row-template">
+      <fieldset class="repeatable-row itinerary-editor-row">
+        <legend>Itinerary entry</legend>
+        <label>Day<input name="itinerary_day" type="number" min="1" step="1"></label>
+        <label>Title<input name="itinerary_title" maxlength="240"></label>
+        <label>Description<input name="itinerary_description" maxlength="5000"></label>
+        <button class="row-remove" type="button" data-remove-row>Remove</button>
+      </fieldset>
+    </template>
+
+    <label class="inclusions-field">Inclusions <span class="field-hint">One per line; leave blank if not confirmed</span>
+      <textarea name="inclusions" rows="3">{{ form_values.get('inclusions') or '' }}</textarea>
+    </label>
+  </section>
+
+  <div class="editor-actions">
+    <a class="button button-outline" href="/admin/packages">Cancel</a>
+    <button class="button button-dark" type="submit">{% if mode == "published_edit" %}Save pending changes{% else %}Save draft{% endif %} <span aria-hidden="true">→</span></button>
+  </div>
+</form>
+<script src="/static/js/admin-packages.js" defer></script>
+{% endblock %}

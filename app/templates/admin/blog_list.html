@@ -1,0 +1,14 @@
+{% extends "admin/base.html" %}
+{% block content %}
+<section class="blog-admin-heading"><div><p class="eyebrow">YatraNest content</p><h1>Travel blog</h1><p>Write helpful destination stories and travel guides.</p></div><a class="button button-primary" href="/admin/blog/new">Create post</a></section>
+<section class="blog-admin-list" aria-label="Blog posts">
+  {% if posts %}
+    {% for post in posts %}
+    <article class="blog-admin-row">
+      <div><span class="blog-state blog-state-{{ post.status }}">{{ post.status|title }}</span><h2>{{ post.title }}</h2><p>{{ post.category }} · Updated {{ post.updated_at.strftime("%d %b %Y") }}{% if post.author %} · {{ post.author.name }}{% endif %}</p></div>
+      <div class="blog-admin-actions"><a class="button button-outline" href="/admin/blog/{{ post.id }}/edit">Edit</a><a class="button button-secondary" href="/admin/blog/{{ post.id }}/preview">Preview</a></div>
+    </article>
+    {% endfor %}
+  {% else %}<div class="blog-empty"><h2>No stories yet</h2><p>Create a draft to start the travel blog.</p></div>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<section class="enquiry-action-error reply-confirmation-panel">
+  <p class="eyebrow">Manual reply record · {{ enquiry.customer_name or "Traveller" }}</p>
+  <h1>Confirm it was sent</h1>
+  <p>This application does not send replies. Continue only if you have already sent this approved reply to the customer outside the application.</p>
+  <blockquote class="reply-confirmation-body">{{ reply.body }}</blockquote>
+  <form class="enquiry-action-form" method="post" action="/admin/enquiries/{{ enquiry.id }}/replies/{{ reply.id }}/manual-sent">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="expected_enquiry_updated_at" value="{{ expected_enquiry_updated_at }}">
+    <input type="hidden" name="expected_reply_updated_at" value="{{ expected_reply_updated_at }}">
+    <label class="reply-confirmation-check"><input type="checkbox" name="confirm_already_sent" value="yes" required> I confirm I already sent this reply outside the application.</label>
+    <div class="enquiry-confirm-actions">
+      <button class="button button-primary" type="submit">Record as manually sent</button>
+      <a class="text-link" href="/admin/enquiries/{{ enquiry.id }}">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

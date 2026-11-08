@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="shared-quote-page">
+  <header class="shared-quote-heading"><a class="brand" href="/" aria-label="YatraNest home"><span class="brand-mark" aria-hidden="true">Y</span><span>Yatra<span class="brand-light">Nest</span></span></a><p class="eyebrow">Private travel quotation</p><h1>{{ quote.package_title_snapshot }}</h1><p>Prepared for {{ quote.customer_name_snapshot }} · Approved {{ quote.approved_at.strftime("%d %b %Y") }}</p></header>
+  <section class="shared-quote-card"><h2>Journey</h2><dl class="quote-dl"><div><dt>Travel dates</dt><dd>{{ quote.travel_start_date.strftime("%d %b %Y") }} – {{ quote.travel_end_date.strftime("%d %b %Y") }}</dd></div><div><dt>Travellers</dt><dd>{{ quote.adults }} adults · {{ quote.children }} children · {{ quote.infants }} infants</dd></div><div><dt>Accommodation</dt><dd>{{ quote.accommodation }}</dd></div></dl></section>
+  <section class="shared-quote-card"><h2>Pricing</h2><dl class="quote-dl"><div><dt>Price basis</dt><dd>{{ quote.price_basis|replace("_", " ") }}</dd></div><div><dt>Adult rate</dt><dd>{{ quote.adult_unit_price|money(quote.currency) }} per person</dd></div>
+  {% if quote.children %}<div><dt>Child fare</dt><dd>{% if quote.child_unit_price is not none %}{{ quote.child_unit_price|money(quote.currency) }} per child{% else %}Requires staff confirmation{% endif %}</dd></div>{% endif %}
+  {% if quote.infants %}<div><dt>Infant fare</dt><dd>{% if quote.infant_unit_price is not none %}{{ quote.infant_unit_price|money(quote.currency) }} per infant{% else %}Requires staff confirmation{% endif %}</dd></div>{% endif %}
+  {% if quote.subtotal_amount is none %}<div><dt>Total</dt><dd>Requires staff confirmation of traveller fares</dd></div>{% else %}<div><dt>Subtotal</dt><dd>{{ quote.subtotal_amount|money(quote.currency) }}</dd></div>{% if quote.gst_rate_percent is none %}<div><dt>GST</dt><dd>Unspecified; confirm treatment</dd></div><div><dt>Total before GST</dt><dd class="quote-total">{{ quote.total_amount|money(quote.currency) }}</dd></div>{% else %}<div><dt>GST added</dt><dd>{{ quote.gst_rate_percent }}% · {{ quote.gst_amount|money(quote.currency) }}</dd></div><div><dt>Quotation total</dt><dd class="quote-total">{{ quote.total_amount|money(quote.currency) }}</dd></div>{% endif %}{% endif %}</dl></section>
+  {% if quote.inclusions %}<section class="shared-quote-card"><h2>Inclusions</h2><div class="quote-preserved-text">{{ quote.inclusions }}</div></section>{% endif %}
+  {% if quote.exclusions %}<section class="shared-quote-card"><h2>Exclusions</h2><div class="quote-preserved-text">{{ quote.exclusions }}</div></section>{% endif %}
+  {% if quote.payment_terms %}<section class="shared-quote-card"><h2>Payment terms</h2><div class="quote-preserved-text">{{ quote.payment_terms }}</div></section>{% endif %}
+  <p class="shared-quote-warning">This quotation is not a booking confirmation. Availability and final terms must be confirmed by YatraNest staff.</p>
+  <a class="button button-primary" href="{{ pdf_url }}">Download PDF</a>
+</main>
+{% endblock %}

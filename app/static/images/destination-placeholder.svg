@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">Southern India landscape illustration</title>
+  <desc id="desc">Layered green hills beneath a warm cream sky.</desc>
+  <rect width="1200" height="800" fill="#e9e8dc"/>
+  <circle cx="890" cy="185" r="80" fill="#d6a36f"/>
+  <path d="M0 510 250 290l220 208 240-262 490 300v264H0Z" fill="#9eaf98"/>
+  <path d="m0 620 310-205 260 207 280-245 350 230v193H0Z" fill="#587965"/>
+  <path d="M0 700c180-90 350-58 520 7 220 85 450 36 680-46v139H0Z" fill="#23483d"/>
+</svg>
